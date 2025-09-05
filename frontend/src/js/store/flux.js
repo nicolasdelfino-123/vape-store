@@ -168,32 +168,32 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 				// Actualizar store (localStorage se maneja en appContext)
 				setStore({
-					...store,
 					cart: updatedCart,
 					toast: {
 						isVisible: true,
 						message: "Producto agregado al carrito"
 					}
 				});
+
 			},
 
 
 			// Toast actions
 			hideToast: () => {
-				const store = getStore();
 				setStore({
-					...store,
 					toast: {
 						isVisible: false,
 						message: ""
 					}
 				});
+
 			},
 
 			removeFromCart: (productId) => {
 				const store = getStore();
 				const cart = store.cart.filter((item) => item.id !== productId);
-				setStore({ ...store, cart });
+				setStore({ cart });
+
 			},
 
 			updateCartQuantity: (productId, quantity) => {
@@ -201,12 +201,13 @@ const getState = ({ getStore, getActions, setStore }) => {
 				const cart = store.cart.map((item) =>
 					item.id === productId ? { ...item, quantity } : item
 				);
-				setStore({ ...store, cart });
+				setStore({ cart });
+
+
 			},
 
 			clearCart: () => {
-				const store = getStore();
-				setStore({ ...store, cart: [] });
+				setStore({ cart: [] });
 			},
 
 			// Usuario (funciones adicionales)
