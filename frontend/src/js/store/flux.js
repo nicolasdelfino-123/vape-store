@@ -12,6 +12,11 @@ const getState = ({ getStore, getActions, setStore }) => {
 			loading: false,
 			categories: ["Vapes Desechables", "Pods", "Líquidos", "Accesorios"],
 			orders: [],
+			// Toast notifications
+			toast: {
+				isVisible: false,
+				message: ""
+			}
 		},
 		actions: {
 
@@ -104,6 +109,26 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 			// === ACCIONES PARA LA TIENDA DE VAPES ===
 
+			// Categorías
+			fetchCategories: async () => {
+				const store = getStore();
+				setStore({ ...store, loading: true });
+
+				try {
+					const response = await fetch(`${backendUrl}/public/categories`);
+					if (!response.ok) {
+						throw new Error('Error al obtener categorías');
+					}
+					const categories = await response.json();
+					setStore({ ...store, categories, loading: false });
+					return { success: true, data: categories };
+				} catch (error) {
+					console.error("Error fetching categories:", error);
+					setStore({ ...store, loading: false });
+					return { success: false, error: error.message };
+				}
+			},
+
 			// Productos
 			fetchProducts: async () => {
 				const store = getStore();
@@ -124,19 +149,45 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
-			// Carrito
+
 			addToCart: (product, quantity = 1) => {
 				const store = getStore();
-				const cart = [...store.cart];
-				const existingItem = cart.find((item) => item.id === product.id);
+				const currentCart = store.cart || [];
+				const existingItemIndex = currentCart.findIndex((item) => item.id === product.id);
 
-				if (existingItem) {
-					existingItem.quantity += quantity;
+				let updatedCart;
+				if (existingItemIndex >= 0) {
+					updatedCart = [...currentCart];
+					updatedCart[existingItemIndex] = {
+						...updatedCart[existingItemIndex],
+						quantity: updatedCart[existingItemIndex].quantity + quantity
+					};
 				} else {
-					cart.push({ ...product, quantity });
+					updatedCart = [...currentCart, { ...product, quantity }];
 				}
 
-				setStore({ ...store, cart });
+				// Actualizar store (localStorage se maneja en appContext)
+				setStore({
+					...store,
+					cart: updatedCart,
+					toast: {
+						isVisible: true,
+						message: "Producto agregado al carrito"
+					}
+				});
+			},
+
+
+			// Toast actions
+			hideToast: () => {
+				const store = getStore();
+				setStore({
+					...store,
+					toast: {
+						isVisible: false,
+						message: ""
+					}
+				});
 			},
 
 			removeFromCart: (productId) => {

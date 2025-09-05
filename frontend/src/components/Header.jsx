@@ -1,18 +1,12 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import store, { actions } from "../store/store.js"
+import { useState, useContext } from "react"
+import { Context } from "../js/store/appContext"
+import { Link } from "react-router-dom"
 
 export default function Header() {
-  const [state, setState] = useState(store.getState())
+  const { store, actions } = useContext(Context)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  useEffect(() => {
-    const unsubscribe = store.subscribe(setState)
-    return unsubscribe
-  }, [])
-
-  const cartItemsCount = state.cart.reduce((total, item) => total + item.quantity, 0)
+  const cartItemsCount = (store.cart || []).reduce((total, item) => total + (item.quantity || 0), 0)
 
   return (
     <header className="bg-gray-900 text-white shadow-lg">
@@ -20,40 +14,40 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-purple-400">VapeStore AR</h1>
+            <h1 className="text-2xl font-bold text-purple-400">Zarpados Vapers</h1>
           </div>
 
           {/* Navigation Desktop */}
           <nav className="hidden md:flex space-x-8">
-            <a href="#productos" className="hover:text-purple-400 transition-colors">
+            <Link to="/products" className="hover:text-purple-400 transition-colors">
               Productos
-            </a>
-            <a href="#categorias" className="hover:text-purple-400 transition-colors">
-              Categorías
-            </a>
-            <a href="#ofertas" className="hover:text-purple-400 transition-colors">
+            </Link>
+            <Link to="/cart" className="hover:text-purple-400 transition-colors">
+              Carrito
+            </Link>
+            <Link to="/#ofertas" className="hover:text-purple-400 transition-colors">
               Ofertas
-            </a>
-            <a href="#contacto" className="hover:text-purple-400 transition-colors">
+            </Link>
+            <Link to="/#contacto" className="hover:text-purple-400 transition-colors">
               Contacto
-            </a>
+            </Link>
           </nav>
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
-            {state.user ? (
+            {store.user ? (
               <div className="flex items-center space-x-2">
-                <span className="text-sm">Hola, {state.user.name}</span>
+                <span className="text-sm">Hola, {store.user.name}</span>
                 <button onClick={() => actions.logoutUser()} className="text-sm hover:text-purple-400">
                   Salir
                 </button>
               </div>
             ) : (
-              <button className="hover:text-purple-400 transition-colors">Ingresar</button>
+              <Link to="/login" className="hover:text-purple-400 transition-colors">Ingresar</Link>
             )}
 
             {/* Cart */}
-            <button className="relative hover:text-purple-400 transition-colors">
+            <Link to="/cart" className="relative hover:text-purple-400 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -67,7 +61,7 @@ export default function Header() {
                   {cartItemsCount}
                 </span>
               )}
-            </button>
+            </Link>
 
             {/* Mobile menu button */}
             <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -82,18 +76,18 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800">
-              <a href="#productos" className="block px-3 py-2 hover:text-purple-400">
+              <Link to="/products" className="block px-3 py-2 hover:text-purple-400">
                 Productos
-              </a>
-              <a href="#categorias" className="block px-3 py-2 hover:text-purple-400">
-                Categorías
-              </a>
-              <a href="#ofertas" className="block px-3 py-2 hover:text-purple-400">
+              </Link>
+              <Link to="/cart" className="block px-3 py-2 hover:text-purple-400">
+                Carrito
+              </Link>
+              <Link to="/#ofertas" className="block px-3 py-2 hover:text-purple-400">
                 Ofertas
-              </a>
-              <a href="#contacto" className="block px-3 py-2 hover:text-purple-400">
+              </Link>
+              <Link to="/#contacto" className="block px-3 py-2 hover:text-purple-400">
                 Contacto
-              </a>
+              </Link>
             </div>
           </div>
         )}

@@ -16,6 +16,7 @@ class User(db.Model):
     last_login: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     is_premium: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
 
     
     def serialize(self):
@@ -28,6 +29,8 @@ class User(db.Model):
             'role': self.role,
             'last_login': self.last_login,
             'is_active': self.is_active,
+            'is_premium': self.is_premium,
+            'is_admin': self.is_admin,
             'is_premium': self.is_premium,
         }
 
@@ -55,6 +58,7 @@ class Product(db.Model):
     price: Mapped[float] = mapped_column(Float, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
@@ -72,6 +76,7 @@ class Product(db.Model):
             'price': self.price,
             'stock': self.stock,
             'image_url': self.image_url,
+            'brand': self.brand,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,

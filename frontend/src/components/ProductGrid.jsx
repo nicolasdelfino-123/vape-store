@@ -1,86 +1,28 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import store from "../store/store.js"
+import { useState, useEffect, useContext } from "react"
+import { Context } from "../js/store/appContext"
 import ProductCard from "./ProductCard.jsx"
 
 export default function ProductGrid() {
-  const [state, setState] = useState(store.getState())
+  const { store, actions } = useContext(Context)
   const [selectedCategory, setSelectedCategory] = useState("Todos")
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-    const unsubscribe = store.subscribe(setState)
-    store.setState({
-      products: [
-        {
-          id: 1,
-          name: "Vape Desechable Elfbar 600",
-          description: "600 puffs, sabor menta fresca",
-          price: 2500,
-          category: "Vapes Desechables",
-          stock: 15,
-          image: null,
-        },
-        {
-          id: 2,
-          name: "Pod Juul Starter Kit",
-          description: "Kit completo con cargador y pods",
-          price: 8900,
-          category: "Pods",
-          stock: 8,
-          image: null,
-        },
-        {
-          id: 3,
-          name: "Líquido Premium 30ml",
-          description: "Sabor frutas tropicales, 6mg nicotina",
-          price: 1800,
-          category: "Líquidos",
-          stock: 25,
-          image: null,
-        },
-        {
-          id: 4,
-          name: "Cargador Universal USB-C",
-          description: "Compatible con la mayoría de dispositivos",
-          price: 1200,
-          category: "Accesorios",
-          stock: 12,
-          image: null,
-        },
-        {
-          id: 5,
-          name: "Vape Desechable Puff Bar",
-          description: "300 puffs, sabor sandía",
-          price: 2200,
-          category: "Vapes Desechables",
-          stock: 20,
-          image: null,
-        },
-        {
-          id: 6,
-          name: "Pod Caliburn G2",
-          description: "Recargable, batería de larga duración",
-          price: 12500,
-          category: "Pods",
-          stock: 5,
-          image: null,
-        },
-      ],
-    })
-    return unsubscribe
-  }, [])
+    // Cargar productos desde la API solo una vez al montar el componente
+    if (actions && actions.fetchProducts) {
+      actions.fetchProducts()
+    }
+  }, []) // Sin dependencias para que solo se ejecute una vez
 
-  const filteredProducts = state.products.filter((product) => {
-    const matchesCategory = selectedCategory === "Todos" || product.category === selectedCategory
+  const filteredProducts = (store.products || []).filter((product) => {
+    const matchesCategory = selectedCategory === "Todos" || product.category_name === selectedCategory
     const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      (product.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description || "").toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
-  const categories = ["Todos", ...new Set(state.products.map((product) => product.category))]
+  const categories = ["Todos", ...(store.categories || [])]
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -114,7 +56,7 @@ export default function ProductGrid() {
       </div>
 
       {/* Products Grid */}
-      {state.loading ? (
+      {store.loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
           <p className="mt-2 text-gray-600">Cargando productos...</p>
@@ -127,7 +69,7 @@ export default function ProductGrid() {
         </div>
       )}
 
-      {filteredProducts.length === 0 && !state.loading && (
+      {filteredProducts.length === 0 && !store.loading && (
         <div className="text-center py-12">
           <p className="text-gray-600">No se encontraron productos que coincidan con tu búsqueda.</p>
         </div>
