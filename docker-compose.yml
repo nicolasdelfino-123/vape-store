@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fullstackboiler
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.prod
+    ports:
+      - "5100:5100"
+    volumes:
+      - ./instance:/app/backend/app/instance
+    networks:
+      - app-network
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: postgresdb
+    restart: always 
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecreta
+      POSTGRES_DB: fullstack-starter
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
