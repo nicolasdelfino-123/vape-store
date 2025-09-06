@@ -1,22 +1,15 @@
 import { useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Context } from "../js/store/appContext.jsx";
 import { useNavigate, Link } from "react-router-dom";
 
-
 // helper para título robusto
-// reemplazá tu helper por este (arriba del componente)
-const getTitle = (it) => String(
-  it?.name ??
-  it?.product?.name ??
-  it?.title ??           // por si todavía tenés algún mock viejo
-  "Producto"
-);
-
+const getTitle = (it) =>
+  String(it?.name ?? it?.product?.name ?? it?.title ?? "Producto");
 
 export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClose }) {
   const { store, actions } = useContext(Context);
   const navigate = useNavigate();
-
 
   const isRouteMode = controlledOpen === undefined && controlledOnClose === undefined;
   const [internalOpen, setInternalOpen] = useState(true);
@@ -25,7 +18,6 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
   const close = () => {
     if (isRouteMode) {
       setInternalOpen(false);
-      // pequeño delay para permitir la animación antes de navegar atrás
       setTimeout(() => navigate(-1), 180);
     } else if (controlledOnClose) {
       controlledOnClose();
@@ -33,13 +25,17 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
   };
 
   const total =
-    store.cart?.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0) || 0;
+    store.cart?.reduce(
+      (sum, item) =>
+        sum + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+      0
+    ) || 0;
 
   // UI local para "medios de envío"
   const [postalCode, setPostalCode] = useState("");
   const [pickup, setPickup] = useState(false);
 
-  // Accesibilidad: cerrar con ESC
+  // Esc para cerrar
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape" && isOpen) close();
@@ -52,12 +48,10 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
   // Focus al abrir
   const closeBtnRef = useRef(null);
   useEffect(() => {
-    if (isOpen && closeBtnRef.current) {
-      closeBtnRef.current.focus();
-    }
+    if (isOpen && closeBtnRef.current) closeBtnRef.current.focus();
   }, [isOpen]);
 
-  // Si no está abierto (drawer), no pinto nada
+  // Si no está abierto (modal), no pinto nada
   if (!isOpen && !isRouteMode) return null;
 
   // Contenido principal del drawer
@@ -65,7 +59,9 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-start justify-between p-4 sm:p-5 border-b">
-        <h2 className="text-xl sm:text-2xl font-bold">Carrito de compras</h2>
+        <h2 id="cart-title" className="text-xl sm:text-2xl font-bold">
+          Carrito de compras
+        </h2>
         <button
           ref={closeBtnRef}
           onClick={close}
@@ -91,10 +87,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
         ) : (
           <>
             {store.cart.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm"
-              >
+              <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
                 <div className="flex gap-3">
                   <img
                     src={item.image_url || "/placeholder-product.jpg"}
@@ -107,13 +100,10 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                         <h4 className="font-medium text-sm sm:text-base leading-snug">
                           {getTitle(item)}
                         </h4>
-
-
                         <p className="text-gray-900 font-semibold">
                           ${Number(item.price || 0).toLocaleString("es-AR")}
                         </p>
                       </div>
-
                       <button
                         onClick={() => actions.removeFromCart(item.id)}
                         className="text-gray-400 hover:text-gray-600"
@@ -155,7 +145,10 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
 
                       {/* Total por ítem */}
                       <div className="text-right font-semibold">
-                        ${(Number(item.price || 0) * Number(item.quantity || 0)).toLocaleString("es-AR")}
+                        $
+                        {(
+                          Number(item.price || 0) * Number(item.quantity || 0)
+                        ).toLocaleString("es-AR")}
                       </div>
                     </div>
                   </div>
@@ -189,7 +182,6 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                 />
                 <button
                   onClick={() => {
-                    // placeholder para tu lógica real de cálculo
                     actions.showToast?.("Cálculo de envío próximamente");
                   }}
                   className="px-4 sm:px-5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
@@ -199,14 +191,19 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               </div>
               <button
                 type="button"
-                onClick={() => window.open("https://www.correoargentino.com.ar/formularios/cpa", "_blank")}
+                onClick={() =>
+                  window.open(
+                    "https://www.correoargentino.com.ar/formularios/cpa",
+                    "_blank"
+                  )
+                }
                 className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
               >
                 No sé mi código postal
               </button>
             </div>
 
-            {/* Nuestro local (retiro en tienda) */}
+            {/* Nuestro local */}
             <div>
               <h3 className="font-semibold mb-2">Nuestro local</h3>
               <label className="flex items-start gap-3 bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
@@ -256,10 +253,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                 Ver más productos
               </Link>
             ) : (
-              <button
-                onClick={close}
-                className="text-gray-700 underline hover:text-gray-900"
-              >
+              <button onClick={close} className="text-gray-700 underline hover:text-gray-900">
                 Ver más productos
               </button>
             )}
@@ -278,29 +272,35 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
     );
   }
 
-  // Drawer con overlay (modo modal)
-  return (
-    <div className="fixed inset-0 z-50">
+  // Drawer con overlay (modo modal): render en portal para NO heredar el transform del Header
+  const modalUI = (
+    <div className="fixed inset-0 z-[100]">
       {/* Overlay */}
       <div
-        className={`absolute inset-0 bg-black/40 transition-opacity ${isOpen ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/40 transition-opacity ${isOpen ? "opacity-100" : "opacity-0"
+          }`}
         onClick={close}
+        style={{ pointerEvents: isOpen ? "auto" : "none" }}
       />
       {/* Panel */}
       <aside
         className={`
-    absolute right-0 top-0 h-full w-full max-w-md md:max-w-lg bg-white shadow-2xl
-    transform transition-transform duration-200
-    ${isOpen ? "translate-x-0" : "translate-x-full"}
-    flex flex-col
-    text-gray-900
-  `}
+          absolute right-0 top-0
+          h-screen w-full max-w-md md:max-w-lg     /* respeta tu ancho actual */
+          bg-white shadow-2xl
+          transform transition-transform duration-200
+          ${isOpen ? "translate-x-0" : "translate-x-full"}
+          flex flex-col text-gray-900
+        `}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-title"
+        style={{ willChange: "transform" }}
       >
         {DrawerContent}
       </aside>
     </div>
   );
+
+  return createPortal(modalUI, document.body);
 }
