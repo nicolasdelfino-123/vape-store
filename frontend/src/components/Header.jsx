@@ -12,34 +12,82 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [show, setShow] = useState(true);
   const lastY = useRef(0);
-  const downSteps = useRef(0);            // 👈 NUEVO: cuenta “pasos” bajando
+  const downScrolls = useRef(0);           // 👈 Cuenta scrolls individuales
+  const isScrolling = useRef(false);       // 👈 NUEVO: detecta si está scrolleando
+  const scrollTimeout = useRef(null);      // 👈 Para detectar fin de scroll individual
 
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
       setIsScrolled(y > 10);
 
-      // dirección
-      const goingDown = y > lastY.current + 2;  // +2 para evitar jitter
-      const goingUp = y < lastY.current - 2;
+      // Configuración - CAMBIA ESTOS NÚMEROS PARA REGULAR
+      const SCROLLS_TO_HIDE = 3;       // 👈 Cuántos scrolls individuales para ocultar
+      const RESET_TIME = 1000;         // 👈 Tiempo sin scrollear para resetear contador
+      const SCROLL_END_DELAY = 150;    // 👈 Tiempo para detectar fin de scroll individual
 
-      if (goingDown) {
-        downSteps.current += 1;                // suma pasos bajando
-        if (downSteps.current >= 3 && y > 10)  // 👈 oculta recién al 3er “paso”
-          setShow(false);
+      const goingDown = y > lastY.current;
+      const goingUp = y < lastY.current;
+
+      if (goingDown && y > 10) {
+        // Si no estaba scrolleando, es un nuevo scroll individual
+        if (!isScrolling.current) {
+          downScrolls.current += 1;
+          console.log(`Scroll individual hacia abajo #${downScrolls.current}`);
+
+          // Ocultar después de X scrolls individuales
+          if (downScrolls.current >= SCROLLS_TO_HIDE) {
+            setShow(false);
+          }
+        }
+
+        // Marcar que está scrolleando
+        isScrolling.current = true;
+
+        // Limpiar timeout de fin de scroll
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+
+        // Detectar cuando termina este scroll individual
+        scrollTimeout.current = setTimeout(() => {
+          isScrolling.current = false; // 👈 Ya no está scrolleando
+        }, SCROLL_END_DELAY);
+
       } else if (goingUp || y < 10) {
-        downSteps.current = 0;                 // resetea
-        setShow(true);                         // muestra al subir o arriba
+        // Reset inmediato al subir o estar arriba
+        downScrolls.current = 0;
+        setShow(true);
+        isScrolling.current = false;
+
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
       }
 
       lastY.current = y;
     };
 
+    // Reset automático después de tiempo sin usar
+    const resetCounter = () => {
+      setTimeout(() => {
+        if (!isScrolling.current && downScrolls.current > 0) {
+          downScrolls.current = 0;
+          console.log('Contador reseteado por inactividad');
+        }
+      }, RESET_TIME);
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, []);
   const cartItemsCount = (store.cart || []).reduce((t, i) => t + (i.quantity || 0), 0);
 
   return (
@@ -87,7 +135,7 @@ export default function Header() {
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center space-x-4 text-white">
+          <div className="hidden md:flex items-center space-x-4 text-white ml-8">
             {store.user ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm">Hola, {store.user.name}</span>
