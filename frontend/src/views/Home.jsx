@@ -17,13 +17,32 @@ function Home() {
     getMsgDemo();
   }, []); // Array de dependencias vacío para que solo se ejecute una vez
 
+  // contador de items del carrito
+  const cartItemsCount = (store.cart || []).reduce(
+    (t, i) => t + (Number(i.quantity) || 0), 0
+  );
+
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gray-900 text-white py-8 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 text-white">Zarpados Vapers</h1>
-          <p className="text-lg sm:text-xl md:text-2xl mb-6 md:mb-8 text-gray-200">Los mejores vapeadores y accesorios del país</p>
+      <section className="bg-gray-900 text-white py-8 md:py-16 relative overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/hero-bg.png"
+            alt="Vapeadores background"
+            className="w-full h-full object-cover opacity-30"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 text-white">¡Envíos a todo el país!</h1>
+          <p className="text-lg sm:text-xl md:text-2xl mb-6 md:mb-8 text-gray-200">Hacemos envíos a toda la Argentina</p>
           <button
             onClick={() => document.getElementById("productos").scrollIntoView({ behavior: "smooth" })}
             className="bg-purple-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
@@ -82,6 +101,138 @@ function Home() {
               <p className="text-sm sm:text-base text-gray-600">MercadoPago y transferencias</p>
             </div>
           </div>
+          {/* Categorías (cards con imagen + botón VER) */}
+          <section className="py-6 md:py-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+
+                {/* PODS RECARGABLES */}
+                <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                    style={{ backgroundImage: "url(/recargables.png)" }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-black/20" aria-hidden />
+                  <div className="relative h-full flex items-center">
+                    <div className="px-5">
+                      <Link
+                        to="/categoria/pods-recargables"
+                        className="inline-block"
+                        aria-label="Ir a Pods Recargables"
+                      >
+                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                          PODS<br />RECARGABLES
+                        </h3>
+                      </Link>
+                      <Link
+                        to="/categoria/pods-recargables"
+                        className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded"
+                      >
+                        VER
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CELULARES */}
+                <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                    style={{ backgroundImage: "url(/celu.png)" }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-black/20" aria-hidden />
+
+                  {/* dentro de la card */}
+                  <div className="relative h-full flex items-start">   {/* nada de items-center */}
+                    <div className="px-5 py-4 flex flex-col gap-2 h-full">  {/* columna con pequeño gap */}
+                      <Link
+                        to="/categoria/celulares"
+                        className="block"
+                        aria-label="Ir a Celulares"
+                      >
+                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                          CELULARES
+                        </h3>
+                      </Link>
+
+                      <Link
+                        to="/categoria/celulares"
+                        className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded"
+                      >
+                        VER
+                      </Link>
+                    </div>
+                  </div>
+
+
+                </div>
+
+                {/* PODS DESCARTABLES */}
+                <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                    style={{ backgroundImage: "url(/desechables.png)" }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-black/20" aria-hidden />
+                  <div className="relative h-full flex items-center">
+                    <div className="px-5">
+                      <Link
+                        to="/categoria/pods-descartables"
+                        className="inline-block"
+                        aria-label="Ir a Pods Descartables"
+                      >
+                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                          PODS<br />DESCARTABLES
+                        </h3>
+                      </Link>
+                      <Link
+                        to="/categoria/pods-descartables"
+                        className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded"
+                      >
+                        VER
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PERFUMES */}
+                <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                    style={{ backgroundImage: "url(/perfumes.png)" }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-black/20" aria-hidden />
+                  <div className="relative h-full flex items-start">
+                    <div className="px-5 py-4 flex flex-col gap-2">
+                      <Link
+                        to="/categoria/perfumes"
+                        className="block"
+                        aria-label="Ir a Perfumes"
+                      >
+                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                          PERFUMES
+                        </h3>
+                      </Link>
+
+                      <Link
+                        to="/categoria/perfumes"
+                        className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded"
+                      >
+                        VER
+                      </Link>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          </section>
+
         </div>
       </section>
 
@@ -153,6 +304,8 @@ function Home() {
               </ul>
             </div>
           </div>
+
+
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2024 VapeStore Argentina. Todos los derechos reservados.</p>

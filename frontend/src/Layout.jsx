@@ -5,7 +5,7 @@ import injectContext, { Context } from './js/store/appContext.jsx';
 import './index.css';
 import Register from './views/Register.jsx';
 import Login from './views/Login.jsx';
-import Page from './views/page.jsx';
+import Inicio from './views/Inicio.jsx';
 import AdminPanel from './views/AdminPanel.jsx';
 import ProductDetail from './views/ProductDetail.jsx';
 // Importar componentes de la tienda
@@ -26,7 +26,7 @@ const Layout = () => {
           <Route exact path='/' element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/page" element={<Page />} />
+          <Route path="/inicio" element={<Inicio />} />
           <Route path="/products" element={<ProductGrid />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />

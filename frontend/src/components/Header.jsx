@@ -12,70 +12,45 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [show, setShow] = useState(true);
   const lastY = useRef(0);
-  const downScrolls = useRef(0);           // 👈 Cuenta scrolls individuales
-  const isScrolling = useRef(false);       // 👈 NUEVO: detecta si está scrolleando
-  const scrollTimeout = useRef(null);      // 👈 Para detectar fin de scroll individual
+  const downScrolls = useRef(0);
+  const isScrolling = useRef(false);
+  const scrollTimeout = useRef(null);
+
+  // ⚙️ Ajustes rápidos de tamaño (en px)
+  const LOGO_BASE_H = 300;
+  const LOGO_SCROLL_H = 340;
+  const LOGO_W = "auto";
+  const USE_WHITE_KILLER = false;
 
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
       setIsScrolled(y > 10);
 
-      // Configuración - CAMBIA ESTOS NÚMEROS PARA REGULAR
-      const SCROLLS_TO_HIDE = 3;       // 👈 Cuántos scrolls individuales para ocultar
-      const RESET_TIME = 1000;         // 👈 Tiempo sin scrollear para resetear contador
-      const SCROLL_END_DELAY = 150;    // 👈 Tiempo para detectar fin de scroll individual
+      const SCROLLS_TO_HIDE = 3;
+      const SCROLL_END_DELAY = 150;
 
       const goingDown = y > lastY.current;
       const goingUp = y < lastY.current;
 
       if (goingDown && y > 10) {
-        // Si no estaba scrolleando, es un nuevo scroll individual
         if (!isScrolling.current) {
           downScrolls.current += 1;
-          console.log(`Scroll individual hacia abajo #${downScrolls.current}`);
-
-          // Ocultar después de X scrolls individuales
-          if (downScrolls.current >= SCROLLS_TO_HIDE) {
-            setShow(false);
-          }
+          if (downScrolls.current >= SCROLLS_TO_HIDE) setShow(false);
         }
-
-        // Marcar que está scrolleando
         isScrolling.current = true;
-
-        // Limpiar timeout de fin de scroll
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
-        }
-
-        // Detectar cuando termina este scroll individual
+        if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
         scrollTimeout.current = setTimeout(() => {
-          isScrolling.current = false; // 👈 Ya no está scrolleando
+          isScrolling.current = false;
         }, SCROLL_END_DELAY);
-
       } else if (goingUp || y < 10) {
-        // Reset inmediato al subir o estar arriba
         downScrolls.current = 0;
         setShow(true);
         isScrolling.current = false;
-
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
-        }
+        if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
       }
 
       lastY.current = y;
-    };
-
-    // Reset automático después de tiempo sin usar
-    const resetCounter = () => {
-      setTimeout(() => {
-        if (!isScrolling.current && downScrolls.current > 0) {
-          downScrolls.current = 0;
-          console.log('Contador reseteado por inactividad');
-        }
-      }, RESET_TIME);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -83,11 +58,10 @@ export default function Header() {
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
-      }
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     };
   }, []);
+
   const cartItemsCount = (store.cart || []).reduce((t, i) => t + (i.quantity || 0), 0);
 
   return (
@@ -119,56 +93,59 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Store name - center on mobile, left on desktop */}
+          {/* Logo */}
           <div className="flex-shrink-0 md:mr-auto">
-            <h1 className={["font-bold text-purple-400 tracking-wide transition-all duration-300", isScrolled ? "text-xl" : "text-2xl"].join(" ")}>
-              Zarpados Vapers
-            </h1>
+            <Link to="/inicio" aria-label="Ir al inicio" className="block">
+              <img
+                src="logo-22.png"
+                alt="Zarpados Vapers"
+                className="block w-auto select-none transition-all duration-300"
+                style={{
+                  height: isScrolled ? LOGO_SCROLL_H : LOGO_BASE_H,
+                  width: LOGO_W,
+                  objectFit: "contain",
+                  imageRendering: "auto",
+                  mixBlendMode: USE_WHITE_KILLER ? "multiply" : "normal"
+                }}
+                decoding="async"
+                loading="eager"
+                fetchPriority="high"
+              />
+            </Link>
           </div>
 
           {/* Navigation - Desktop */}
-          <nav className="hidden md:flex space-x-8 text-white">
-            <Link to="/inicio" className="hover:text-purple-400 transition-colors">Inicio</Link>
-            <Link to="/products" className="hover:text-purple-400 transition-colors">Productos</Link>
-            <a href="/#ofertas" className="hover:text-purple-400 transition-colors">Ofertas</a>
-            <a href="/#contacto" className="hover:text-purple-400 transition-colors">Contacto</a>
+          <nav className="hidden md:flex space-x-8">
+            <Link to="/inicio" className="hover:text-purple-400 transition-colors text-gray-300">Inicio</Link>
+            <Link to="/products" className="hover:text-purple-400 transition-colors text-gray-300">Productos</Link>
+            <a href="/#ofertas" className="hover:text-purple-400 transition-colors text-gray-300">Ofertas</a>
+            <a href="/#contacto" className="hover:text-purple-400 transition-colors text-gray-300">Contacto</a>
+
+            {/* ✅ Ingresar SOLO en el nav y SOLO si NO hay usuario */}
+            {!store.user && (
+              <Link to="/login" className="hover:text-purple-400 transition-colors text-gray-300">
+                Ingresar
+              </Link>
+            )}
           </nav>
 
-          {/* Desktop Actions */}
+          {/* Desktop Actions (SIN "Ingresar" para evitar duplicado) */}
           <div className="hidden md:flex items-center space-x-4 text-white ml-8">
-            {store.user ? (
+            {store.user && (
               <div className="flex items-center space-x-2">
                 <span className="text-sm">Hola, {store.user.name}</span>
-                <button onClick={() => actions.logoutUser()} className="text-sm hover:text-purple-400">Salir</button>
+                <button onClick={() => actions.logoutUser()} className="text-sm hover:text-purple-400">
+                  Salir
+                </button>
               </div>
-            ) : (
-              <Link to="/login" className="hover:text-purple-400 transition-colors">Ingresar</Link>
             )}
 
+
+            {/* Carrito (dejalo si lo necesitás en desktop) */}
             <button
               type="button"
               onClick={() => setCartOpen(true)}
               className="relative hover:text-purple-400 transition-colors bg-transparent border-0 p-0"
-              aria-label="Abrir carrito"
-              title="Carrito"
-            >
-              <svg className={["w-6 h-6", isScrolled ? "scale-95" : "scale-100", "transition-transform"].join(" ")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9" />
-              </svg>
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemsCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Mobile cart - right */}
-          <div className="md:hidden">
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className="relative hover:text-purple-400 transition-colors bg-transparent border-0 p-0 text-white"
               aria-label="Abrir carrito"
               title="Carrito"
             >
@@ -204,7 +181,7 @@ export default function Header() {
               </Link>
               <a
                 href="/#ofertas"
-                className="block px-3 py-2 hover:text-purple-400 transition-colors"
+                className="block px-3 py-2 text-gray-200 hover:text-purple-400 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Ofertas
@@ -217,16 +194,12 @@ export default function Header() {
                 Contacto
               </a>
 
+              {/* Mobile: Ingresar solo si NO hay usuario (esto es independiente del nav desktop) */}
               {store.user ? (
                 <div className="border-t border-gray-700 pt-2">
-                  <div className="px-3 py-2 text-sm text-gray-300">
-                    Hola, {store.user.name}
-                  </div>
+                  <div className="px-3 py-2 text-sm text-gray-300">Hola, {store.user.name}</div>
                   <button
-                    onClick={() => {
-                      actions.logoutUser();
-                      setIsMenuOpen(false);
-                    }}
+                    onClick={() => { actions.logoutUser(); setIsMenuOpen(false); }}
                     className="block w-full text-left px-3 py-2 hover:text-purple-400 transition-colors"
                   >
                     Salir
