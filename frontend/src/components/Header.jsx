@@ -2,6 +2,8 @@ import { useState, useContext, useEffect, useRef } from "react";
 import { Context } from "../js/store/appContext.jsx";
 import { Link } from "react-router-dom";
 import Cart from "../components/Cart.jsx";
+import AccountDropdown from "../components/AccountDropdown.jsx";
+
 
 export default function Header() {
   const { store, actions } = useContext(Context);
@@ -129,23 +131,35 @@ export default function Header() {
             )}
           </nav>
 
-          {/* Desktop Actions (SIN "Ingresar" para evitar duplicado) */}
+          {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4 text-white ml-8">
-            {store.user && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm">Hola, {store.user.name}</span>
-                <button onClick={() => actions.logoutUser()} className="text-sm hover:text-purple-400">
-                  Salir
-                </button>
-              </div>
-            )}
+            <AccountDropdown />
 
-
-            {/* Carrito (dejalo si lo necesitás en desktop) */}
+            {/* Carrito Desktop */}
             <button
               type="button"
               onClick={() => setCartOpen(true)}
               className="relative hover:text-purple-400 transition-colors bg-transparent border-0 p-0"
+              aria-label="Abrir carrito"
+              title="Carrito"
+            >
+              <svg className={["w-6 h-6", isScrolled ? "scale-95" : "scale-100", "transition-transform"].join(" ")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9" />
+              </svg>
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Mobile cart - right */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="relative hover:text-purple-400 transition-colors bg-transparent border-0 p-0 text-white"
               aria-label="Abrir carrito"
               title="Carrito"
             >
@@ -196,8 +210,8 @@ export default function Header() {
 
               {/* Mobile: Ingresar solo si NO hay usuario (esto es independiente del nav desktop) */}
               {store.user ? (
-                <div className="border-t border-gray-700 pt-2">
-                  <div className="px-3 py-2 text-sm text-gray-300">Hola, {store.user.name}</div>
+                <div className="border-t border-gray-700 pt-2 bg-transparent">
+                  <div className="px-3 py-2 text-sm text-gray-300 ">Hola, {store.user.name}</div>
                   <button
                     onClick={() => { actions.logoutUser(); setIsMenuOpen(false); }}
                     className="block w-full text-left px-3 py-2 hover:text-purple-400 transition-colors"

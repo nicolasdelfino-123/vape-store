@@ -27,7 +27,6 @@ def create_user():
 
         new_user = User(email=email, password=password_hash, name=name)
 
-
         db.session.add(new_user)
         db.session.commit()
 
@@ -37,7 +36,7 @@ def create_user():
         return jsonify({'error': 'Error in user creation: ' + str(e)}), 500
 
 
-#RUTA LOG-IN ( CON TOKEN DE RESPUESTA )
+# RUTA LOG-IN ( CON TOKEN DE RESPUESTA )
 @user_bp.route('/login', methods=['POST'])
 def get_token():
     try:
@@ -333,11 +332,70 @@ def get_order_by_id(order_id):
         return jsonify({'error': 'Error al obtener orden: ' + str(e)}), 500
 
 
+# === PERFIL Y DIRECCIONES (NUEVO) ===
 
+@user_bp.route("/me", methods=["GET"])
+@jwt_required()
+def me_get():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    return jsonify(user.serialize()), 200
 
+@user_bp.route("/me", methods=["PUT"])
+@jwt_required()
+def me_update():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
 
+    data = request.get_json() or {}
 
+    # actualizar nombre (si viene)
+    nombre_nuevo = data.get("name")
+    if nombre_nuevo:
+        user.name = nombre_nuevo
 
+    # cambio de contraseña (opcional)
+    current = data.get("current_password")
+    new = data.get("new_password")
+    confirm = data.get("confirm_password")
 
+    if any([current, new, confirm]):
+        if not (current and new and confirm):
+            return jsonify({"error": "Completá todos los campos de contraseña"}), 400
+        if new != confirm:
+            return jsonify({"error": "La nueva contraseña no coincide"}), 400
+        # Verificar con bcrypt (hash guardado en DB)
+        if not bcrypt.check_password_hash(user.password, current):
+            return jsonify({"error": "Contraseña actual incorrecta"}), 400
+        user.password = bcrypt.generate_password_hash(new).decode("utf-8")
 
+    db.session.commit()
+    return jsonify(user.serialize()), 200
 
+@user_bp.route("/address", methods=["GET"])
+@jwt_required()
+def address_get():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    return jsonify({"address": user.address or "", "phone": user.phone or ""}), 200
+
+@user_bp.route("/address", methods=["PUT"])
+@jwt_required()
+def address_update():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    data = request.get_json() or {}
+    user.address = data.get("address", user.address)
+    user.phone = data.get("phone", user.phone)
+
+    db.session.commit()
+    return jsonify({"address": user.address or "", "phone": user.phone or ""}), 200

@@ -12,10 +12,14 @@ const getState = ({ getStore, getActions, setStore }) => {
 			loading: false,
 			categories: ["Vapes Desechables", "Pods", "Líquidos", "Accesorios"],
 			orders: [],
+			userAddress: { address: "", phone: "" },
+			updateStatusMsg: "",
+
 			// Toast notifications
 			toast: {
 				isVisible: false,
-				message: ""
+				message: "",
+
 			}
 		},
 		actions: {
@@ -106,6 +110,92 @@ const getState = ({ getStore, getActions, setStore }) => {
 					return { success: false, error: "ocurrió un error inesperado" };
 				}
 			},
+
+			hydrateSession: async () => {
+				const store = getStore();
+				const token = localStorage.getItem("token");
+				if (!token) return;
+				try {
+					const res = await fetch(`${backendUrl}/user/me`, {
+						headers: { "Authorization": `Bearer ${token}` }
+					});
+					if (!res.ok) throw new Error("No se pudo hidratar sesión");
+					const user = await res.json();
+					setStore({ ...store, user });
+				} catch (e) {
+					localStorage.removeItem("token");
+					setStore({ ...store, user: null });
+				}
+			},
+
+			fetchUserAddress: async () => {
+				const token = localStorage.getItem("token");
+				if (!token) return null;
+				try {
+					const res = await fetch(`${backendUrl}/user/address`, {
+						headers: { "Authorization": `Bearer ${token}` }
+					});
+					if (!res.ok) throw new Error("No se pudo obtener dirección");
+					const data = await res.json(); // {address, phone}
+					const store = getStore();
+					setStore({ ...store, userAddress: data });
+					return data;
+				} catch (e) {
+					console.error(e);
+					return null;
+				}
+			},
+
+			updateUserAddress: async (address, phone) => {
+				const token = localStorage.getItem("token");
+				if (!token) return;
+				try {
+					const res = await fetch(`${backendUrl}/user/address`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							"Authorization": `Bearer ${token}`
+						},
+						body: JSON.stringify({ address, phone })
+					});
+					if (!res.ok) throw new Error("No se pudo actualizar dirección");
+					const data = await res.json();
+					const store = getStore();
+					setStore({ ...store, userAddress: data, updateStatusMsg: "Dirección actualizada" });
+					return true;
+				} catch (e) {
+					console.error(e);
+					return false;
+				}
+			},
+
+			updateAccountDetails: async ({ name, current_password, new_password, confirm_password }) => {
+				const token = localStorage.getItem("token");
+				if (!token) return;
+				try {
+					const res = await fetch(`${backendUrl}/user/me`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							"Authorization": `Bearer ${token}`
+						},
+						body: JSON.stringify({ name, current_password, new_password, confirm_password })
+					});
+					const store = getStore();
+					if (!res.ok) {
+						const err = await res.json();
+						setStore({ ...store, updateStatusMsg: err.error || "No se pudo actualizar" });
+						return false;
+					}
+					const user = await res.json();
+					setStore({ ...store, user, updateStatusMsg: "Datos actualizados" });
+					return true;
+				} catch (e) {
+					console.error(e);
+					return false;
+				}
+			},
+
 
 			// === ACCIONES PARA LA TIENDA DE VAPES ===
 

@@ -90,3 +90,6 @@ def get_products_by_category(category_id):
         
     except Exception as e:
         return jsonify({'error': 'Error al obtener productos de la categoría: ' + str(e)}), 500
+    
+
+    
