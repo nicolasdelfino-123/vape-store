@@ -122,13 +122,6 @@ export default function Header() {
             <Link to="/products" className="hover:text-purple-400 transition-colors text-gray-300">Productos</Link>
             <a href="/#ofertas" className="hover:text-purple-400 transition-colors text-gray-300">Ofertas</a>
             <a href="/#contacto" className="hover:text-purple-400 transition-colors text-gray-300">Contacto</a>
-
-            {/* ✅ Ingresar SOLO en el nav y SOLO si NO hay usuario */}
-            {!store.user && (
-              <Link to="/login" className="hover:text-purple-400 transition-colors text-gray-300">
-                Ingresar
-              </Link>
-            )}
           </nav>
 
           {/* Desktop Actions */}

@@ -101,9 +101,26 @@ const getState = ({ getStore, getActions, setStore }) => {
 					console.log("esta es la data", data)
 					if (data.access_token) {
 						localStorage.setItem("token", data.access_token);
+
+						// Obtener datos completos del usuario
+						try {
+							const userRes = await fetch(`${backendUrl}/user/me`, {
+								headers: { "Authorization": `Bearer ${data.access_token}` }
+							});
+							if (userRes.ok) {
+								const userData = await userRes.json();
+								const store = getStore();
+								setStore({ ...store, user: userData });
+								return { success: true, data: userData };
+							}
+						} catch (userError) {
+							console.log("Error obteniendo datos de usuario:", userError);
+						}
 					}
+
+					// Fallback si falla la obtención de datos del usuario
 					const store = getStore();
-					setStore({ ...store, user: data });
+					setStore({ ...store, user: { role: data.role } });
 					return { success: true, data: data };
 
 				} catch (error) {
@@ -169,34 +186,59 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
-			updateAccountDetails: async ({ name, current_password, new_password, confirm_password }) => {
+			updateAccountDetails: async (userData) => {
 				const token = localStorage.getItem("token");
-				if (!token) return;
+				console.log("Token encontrado:", token ? "Sí" : "No");
+
+				if (!token) {
+					const store = getStore();
+					setStore({ ...store, updateStatusMsg: "Error: No hay sesión activa" });
+					return false;
+				}
+
 				try {
+					console.log("Enviando datos a:", `${backendUrl}/user/me`);
+					console.log("Datos a enviar:", userData);
+					console.log("Headers:", {
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${token.substring(0, 20)}...`
+					});
+
 					const res = await fetch(`${backendUrl}/user/me`, {
 						method: "PUT",
 						headers: {
 							"Content-Type": "application/json",
 							"Authorization": `Bearer ${token}`
 						},
-						body: JSON.stringify({ name, current_password, new_password, confirm_password })
+						body: JSON.stringify(userData)
 					});
+
+					console.log("Status de respuesta:", res.status);
+
 					const store = getStore();
+
 					if (!res.ok) {
 						const err = await res.json();
-						setStore({ ...store, updateStatusMsg: err.error || "No se pudo actualizar" });
+						console.error("Error del backend:", err);
+						setStore({ ...store, updateStatusMsg: err.error || "No se pudo actualizar los datos" });
 						return false;
 					}
-					const user = await res.json();
-					setStore({ ...store, user, updateStatusMsg: "Datos actualizados" });
+
+					const updatedUser = await res.json();
+					console.log("Usuario actualizado:", updatedUser);
+					setStore({
+						...store,
+						user: updatedUser,
+						updateStatusMsg: "Datos actualizados correctamente"
+					});
 					return true;
 				} catch (e) {
-					console.error(e);
+					console.error("Error en updateAccountDetails:", e);
+					const store = getStore();
+					setStore({ ...store, updateStatusMsg: "Error inesperado al actualizar" });
 					return false;
 				}
-			},
-
-			sendPasswordSetupEmail: async (email) => {
+			}, sendPasswordSetupEmail: async (email) => {
 				try {
 					const response = await fetch(`${backendUrl}/user/register-email`, {
 						method: "POST",
@@ -452,6 +494,12 @@ const getState = ({ getStore, getActions, setStore }) => {
 				} catch (error) {
 					return { success: false, error: "Error inesperado al restablecer contraseña" };
 				}
+			},
+
+			// Limpiar mensaje de estado
+			clearUpdateStatusMsg: () => {
+				const store = getStore();
+				setStore({ ...store, updateStatusMsg: "" });
 			},
 
 		}

@@ -8,6 +8,7 @@ import Register from "./views/Register.jsx";
 import Login from "./views/Login.jsx";
 import SetupPassword from "./views/SetupPassword.jsx";
 import ResetPassword from "./views/ResetPassword.jsx";
+import Logout from "./views/Logout.jsx";
 import Inicio from "./views/Inicio.jsx";
 import AdminPanel from "./views/AdminPanel.jsx";
 import ProductDetail from "./views/ProductDetail.jsx";
@@ -65,8 +66,8 @@ const Layout = () => {
             <Route path="direcciones" element={<AddressesPage />} />
             {/* Detalles de la cuenta */}
             <Route path="detalles" element={<AccountDetailsPage />} />
-            {/* Cerrar sesión (simple placeholder) */}
-            <Route path="cerrar" element={<div className="p-6">Cerrando sesión…</div>} />
+            {/* Cerrar sesión */}
+            <Route path="cerrar" element={<Logout />} />
           </Route>
 
         </Routes>
