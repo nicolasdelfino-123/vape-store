@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from app import db, bcrypt
+from flask_mail import Message
+from app import db, bcrypt, mail
 from app.models import User, Product, CartItem, Order, OrderItem
 from datetime import timedelta
+import secrets
 
 
 user_bp = Blueprint('user', __name__)
@@ -399,3 +401,184 @@ def address_update():
 
     db.session.commit()
     return jsonify({"address": user.address or "", "phone": user.phone or ""}), 200
+
+
+# NUEVO: Registro con envío de email
+@user_bp.route('/register-email', methods=['POST'])
+def register_email():
+    try:
+        email = request.json.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email es requerido'}), 400
+
+        # Verificar si el usuario ya existe
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({'error': 'Este email ya está registrado'}), 409
+
+        # Generar token único
+        token = secrets.token_urlsafe(32)
+        
+        # Crear usuario temporal sin contraseña
+        temp_user = User(
+            email=email,
+            password='temp_password',  # Contraseña temporal
+            name='Usuario Temporal',
+            is_active=False  # Inactivo hasta confirmar email
+        )
+        
+        db.session.add(temp_user)
+        db.session.commit()
+        
+        # Guardar token en algún lugar (podrías crear una tabla tokens o usar Redis)
+        # Por simplicidad, vamos a usar el campo name temporalmente
+        temp_user.name = f'temp_token:{token}'
+        db.session.commit()
+        
+        # Enviar email
+        msg = Message(
+            'Confirma tu registro en Zarpados Vapers',
+            recipients=[email],
+            charset='utf-8'
+        )
+        
+        # Crear URL del frontend para setup password
+        frontend_url = "http://localhost:5174"  # URL del frontend
+        setup_url = f"{frontend_url}/setup-password?token={token}"
+        
+        msg.html = """
+        <h2>¡Bienvenido a Zarpados Vapers!</h2>
+        <p>Hace clic en el siguiente enlace para establecer tu contraseña:</p>
+        <a href="{}" style="background: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Establecer Contraseña
+        </a>
+        <p>Si no solicitaste este registro, ignora este email.</p>
+        """.format(setup_url)
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'message': 'Email enviado correctamente',
+            'email': email
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al procesar registro: {str(e)}'}), 500
+
+# NUEVO: Establecer contraseña desde email
+@user_bp.route('/setup-password', methods=['POST'])
+def setup_password():
+    try:
+        token = request.json.get('token')
+        password = request.json.get('password')
+        name = request.json.get('name')
+        
+        if not all([token, password, name]):
+            return jsonify({'error': 'Token, contraseña y nombre son requeridos'}), 400
+        
+        # Buscar usuario por token
+        user = User.query.filter(User.name.like(f'temp_token:{token}%')).first()
+        
+        if not user:
+            return jsonify({'error': 'Token inválido o expirado'}), 400
+        
+        # Actualizar usuario
+        user.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        user.name = name
+        user.is_active = True
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Contraseña establecida correctamente'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al establecer contraseña: {str(e)}'}), 500
+
+# NUEVO: Forgot Password - Enviar email de recuperación
+@user_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    try:
+        email = request.json.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email es requerido'}), 400
+
+        # Verificar si el usuario existe
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # Por seguridad, no revelamos si el email existe o no
+            return jsonify({'message': 'Si el email existe, recibirás un enlace de recuperación'}), 200
+
+        # Generar token único para reset
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Guardar token en el campo address temporalmente 
+        user.address = f'reset_token:{reset_token}'
+        db.session.commit()
+        
+        # Enviar email de recuperación
+        msg = Message(
+            'Recupera tu contraseña - Zarpados Vapers',
+            recipients=[email],
+            charset='utf-8'
+        )
+        
+        # Crear URL del frontend para reset password
+        frontend_url = "http://localhost:5174"  # URL del frontend
+        reset_url = f"{frontend_url}/reset-password/{reset_token}"
+        
+        msg.html = """
+        <h2>Recuperación de Contraseña</h2>
+        <p>Recibimos una solicitud para restablecer tu contraseña en Zarpados Vapers.</p>
+        <p>Hace clic en el siguiente enlace para crear una nueva contraseña:</p>
+        <a href="{}" style="background: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Restablecer Contraseña
+        </a>
+        <p>Si no solicitaste este cambio, ignora este email.</p>
+        <p>Este enlace expirará en 24 horas.</p>
+        """.format(reset_url)
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'message': 'Si el email existe, recibirás un enlace de recuperación'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Error al procesar solicitud: {str(e)}'}), 500
+
+
+# NUEVO: Reset Password - Cambiar contraseña con token
+@user_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    try:
+        token = request.json.get('token')
+        new_password = request.json.get('password')
+        
+        if not token or not new_password:
+            return jsonify({'error': 'Token y nueva contraseña son requeridos'}), 400
+
+        # Buscar usuario con el token en el campo address
+        users = User.query.filter(User.address.like(f'%reset_token:{token}%')).all()
+        
+        if not users:
+            return jsonify({'error': 'Token inválido o expirado'}), 400
+
+        user = users[0]
+        
+        # Actualizar contraseña
+        password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        user.password = password_hash
+        user.address = None  # Limpiar token del campo address
+        user.is_active = True  # Activar usuario si no estaba activo
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Contraseña restablecida correctamente'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al restablecer contraseña: {str(e)}'}), 500

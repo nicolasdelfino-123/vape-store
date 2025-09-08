@@ -196,6 +196,49 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
+			sendPasswordSetupEmail: async (email) => {
+				try {
+					const response = await fetch(`${backendUrl}/user/register-email`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ email })
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						return { success: false, error: errorData.error || "Error al enviar email" };
+					}
+
+					const data = await response.json();
+					return { success: true, data: data };
+				} catch (error) {
+					return { success: false, error: "Error inesperado al enviar email" };
+				}
+			},
+
+			setupPassword: async (token, password, name) => {
+				try {
+					const response = await fetch(`${backendUrl}/user/setup-password`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ token, password, name })
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						return { success: false, error: errorData.error || "Error al establecer contraseña" };
+					}
+
+					const data = await response.json();
+					return { success: true, data: data };
+				} catch (error) {
+					return { success: false, error: "Error inesperado" };
+				}
+			},
 
 			// === ACCIONES PARA LA TIENDA DE VAPES ===
 
@@ -362,6 +405,52 @@ const getState = ({ getStore, getActions, setStore }) => {
 					console.error("Error fetching orders:", error);
 					setStore({ ...store, loading: false });
 					return { success: false, error: error.message };
+				}
+			},
+
+			// Forgot password
+			forgotPassword: async (email) => {
+				try {
+					const response = await fetch(`${backendUrl}/user/forgot-password`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ email })
+					});
+
+					const data = await response.json();
+
+					if (!response.ok) {
+						return { success: false, error: data.error || "Error al enviar email de recuperación" };
+					}
+
+					return { success: true, message: data.message };
+				} catch (error) {
+					return { success: false, error: "Error inesperado al procesar solicitud" };
+				}
+			},
+
+			// Reset password
+			resetPassword: async (token, password) => {
+				try {
+					const response = await fetch(`${backendUrl}/user/reset-password`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ token, password })
+					});
+
+					const data = await response.json();
+
+					if (!response.ok) {
+						return { success: false, error: data.error || "Error al restablecer contraseña" };
+					}
+
+					return { success: true, message: data.message };
+				} catch (error) {
+					return { success: false, error: "Error inesperado al restablecer contraseña" };
 				}
 			},
 

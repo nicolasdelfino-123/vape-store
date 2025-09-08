@@ -93,3 +93,21 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Arreglar espaciado desde arriba */
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Asegurar que el contenido principal ocupe el espacio disponible */
+.container-fluid {
+  flex: 1;
+  padding: 0;
+}

@@ -6,9 +6,12 @@ import injectContext, { Context } from "./js/store/appContext.jsx";
 import Home from "./views/Home";
 import Register from "./views/Register.jsx";
 import Login from "./views/Login.jsx";
+import SetupPassword from "./views/SetupPassword.jsx";
+import ResetPassword from "./views/ResetPassword.jsx";
 import Inicio from "./views/Inicio.jsx";
 import AdminPanel from "./views/AdminPanel.jsx";
 import ProductDetail from "./views/ProductDetail.jsx";
+import Footer from "./components/Footer.jsx";
 
 // Componentes existentes
 import Cart from "./components/Cart.jsx";
@@ -42,6 +45,8 @@ const Layout = () => {
           {/* ===== Rutas que ya tenías ===== */}
           <Route exact path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/setup-password" element={<SetupPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/inicio" element={<Inicio />} />
           <Route path="/products" element={<ProductGrid />} />
@@ -63,7 +68,9 @@ const Layout = () => {
             {/* Cerrar sesión (simple placeholder) */}
             <Route path="cerrar" element={<div className="p-6">Cerrando sesión…</div>} />
           </Route>
+
         </Routes>
+        <Footer />
 
         {/* Toast global (queda igual) */}
         <Toast

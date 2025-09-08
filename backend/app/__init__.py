@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_mail import Mail
 from dotenv import load_dotenv
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 
@@ -14,6 +15,7 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 jwt = JWTManager()
 migrate = Migrate()
+mail = Mail()
 
 def create_app():
     
@@ -38,6 +40,7 @@ def create_app():
     bcrypt.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db, compare_type=True)
+    mail.init_app(app)
 
     # Creamos carpeta de base de datos si no existe
     db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'mydatabase.db')

@@ -7,6 +7,16 @@ class Config:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Configuración de email
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME')  # tu email
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')   # tu contraseña de app
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_USERNAME')
+    MAIL_ASCII_ATTACHMENTS = False
+    
     # Configuración base de PostgreSQL
     @staticmethod
     def get_database_uri():
