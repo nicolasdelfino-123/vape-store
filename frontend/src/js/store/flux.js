@@ -186,9 +186,10 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
+			// 🔥 MEJORAR: Logs más detallados para debugging
 			updateAccountDetails: async (userData) => {
 				const token = localStorage.getItem("token");
-				console.log("Token encontrado:", token ? "Sí" : "No");
+				console.log("🔧 Actualizando cuenta:", { token: token ? "✅" : "❌", userData });
 
 				if (!token) {
 					const store = getStore();
@@ -197,12 +198,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 
 				try {
-					console.log("Enviando datos a:", `${backendUrl}/user/me`);
-					console.log("Datos a enviar:", userData);
-					console.log("Headers:", {
-						"Content-Type": "application/json",
-						"Authorization": `Bearer ${token.substring(0, 20)}...`
-					});
+					console.log("📤 Enviando PUT a:", `${backendUrl}/user/me`);
 
 					const res = await fetch(`${backendUrl}/user/me`, {
 						method: "PUT",
@@ -213,32 +209,36 @@ const getState = ({ getStore, getActions, setStore }) => {
 						body: JSON.stringify(userData)
 					});
 
-					console.log("Status de respuesta:", res.status);
+					console.log("📥 Respuesta:", res.status, res.statusText);
 
 					const store = getStore();
 
 					if (!res.ok) {
 						const err = await res.json();
-						console.error("Error del backend:", err);
+						console.error("❌ Error del backend:", err);
 						setStore({ ...store, updateStatusMsg: err.error || "No se pudo actualizar los datos" });
 						return false;
 					}
 
 					const updatedUser = await res.json();
-					console.log("Usuario actualizado:", updatedUser);
+					console.log("✅ Usuario actualizado:", updatedUser);
+
+					// 🔥 IMPORTANTE: Actualizar store con datos completos
 					setStore({
 						...store,
-						user: updatedUser,
+						user: updatedUser, // Datos actualizados del usuario
 						updateStatusMsg: "Datos actualizados correctamente"
 					});
 					return true;
 				} catch (e) {
-					console.error("Error en updateAccountDetails:", e);
+					console.error("❌ Error en updateAccountDetails:", e);
 					const store = getStore();
 					setStore({ ...store, updateStatusMsg: "Error inesperado al actualizar" });
 					return false;
 				}
-			}, sendPasswordSetupEmail: async (email) => {
+			},
+
+			sendPasswordSetupEmail: async (email) => {
 				try {
 					const response = await fetch(`${backendUrl}/user/register-email`, {
 						method: "POST",

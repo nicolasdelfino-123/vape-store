@@ -20,7 +20,7 @@ import ProductGrid from "./components/ProductGrid.jsx";
 import Header from "./components/Header.jsx";
 import Toast from "./components/Toast.jsx";
 
-// ====== NUEVO: páginas de "Mi Cuenta" ======
+// Páginas de "Mi Cuenta"
 import AccountLayout from "./views/AccountLayout.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import OrderListPage from "./views/OrderListPage.jsx";
@@ -32,10 +32,28 @@ const Layout = () => {
   const { store, actions } = useContext(Context);
   const basename = import.meta.env.VITE_BASENAME || "";
 
-  // ✅ Hidratar sesión si ya hay token (para que aparezca el dropdown con el usuario)
+  // 🔥 MEJORAR: Hidratar sesión al cargar la app
   useEffect(() => {
-    if (actions.hydrateSession) actions.hydrateSession();
-  }, []);
+    const initializeApp = async () => {
+      console.log("🚀 Inicializando aplicación...");
+
+      // 1. Hidratar sesión si hay token
+      if (actions.hydrateSession) {
+        console.log("💧 Hidratando sesión...");
+        await actions.hydrateSession();
+      }
+
+      // 2. Cargar productos si no están cargados
+      if (actions.fetchProducts && (!store.products || store.products.length === 0)) {
+        console.log("📦 Cargando productos...");
+        await actions.fetchProducts();
+      }
+
+      console.log("✅ Aplicación inicializada");
+    };
+
+    initializeApp();
+  }, []); // Solo al montar la app
 
   return (
     <div>
@@ -55,7 +73,7 @@ const Layout = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<AdminPanel />} />
 
-          {/* ===== NUEVO: Mi Cuenta con subrutas ===== */}
+          {/* ===== Mi Cuenta con subrutas ===== */}
           <Route path="/cuenta" element={<AccountLayout />}>
             {/* Escritorio */}
             <Route index element={<Dashboard />} />
@@ -73,7 +91,7 @@ const Layout = () => {
         </Routes>
         <Footer />
 
-        {/* Toast global (queda igual) */}
+        {/* Toast global */}
         <Toast
           message={store.toast?.message || ""}
           isVisible={store.toast?.isVisible || false}

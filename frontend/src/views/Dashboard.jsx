@@ -1,6 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { Context } from "../js/store/appContext.jsx";
 import { Link } from "react-router-dom";
+import AccountDetailsPage from "./AccountDetailsPage.jsx";
+import AddressesPage from "./AddressesPage.jsx";
 
 function AccessCard({ onClick, title, icon, isActive }) {
     return (
@@ -25,13 +27,15 @@ export default function Dashboard() {
     const { store, actions } = useContext(Context);
     const [activeSection, setActiveSection] = useState("dashboard");
 
-    // Cargar datos al inicio
+    // Cargar datos al inicio y hidratar sesión
     useEffect(() => {
         if (actions.fetchOrders) actions.fetchOrders();
         if (actions.fetchUserAddress) actions.fetchUserAddress();
+        // 🔥 CRÍTICO: Hidratar sesión al cargar el dashboard
+        if (actions.hydrateSession && !store.user) actions.hydrateSession();
     }, []);
 
-    // Datos de ejemplo como tienes actualmente
+    // Datos de ejemplo
     const sampleOrders = [
         {
             id: 28816,
@@ -49,7 +53,7 @@ export default function Dashboard() {
 
     const recentOrders = store.orders?.length > 0 ? store.orders.slice(0, 3) : sampleOrders;
 
-    // Si está en dashboard, mostrar la vista principal
+    // Vista principal del dashboard
     if (activeSection === "dashboard") {
         return (
             <div>
@@ -144,7 +148,7 @@ export default function Dashboard() {
         );
     }
 
-    // Si está en otra sección, mostrar con botón volver
+    // Mostrar secciones específicas con botón volver
     return (
         <div>
             <button
@@ -188,6 +192,22 @@ export default function Dashboard() {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {/* 🔥 FALTABA ESTA SECCIÓN */}
+            {activeSection === "direcciones" && (
+                <div>
+                    <h2 className="text-2xl font-bold mb-4">Mis direcciones</h2>
+                    <AddressesPage />
+                </div>
+            )}
+
+            {/* 🔥 FALTABA ESTA SECCIÓN */}
+            {activeSection === "detalles" && (
+                <div>
+                    <h2 className="text-2xl font-bold mb-4">Detalles de la cuenta</h2>
+                    <AccountDetailsPage />
                 </div>
             )}
         </div>
