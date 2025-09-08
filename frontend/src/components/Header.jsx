@@ -210,7 +210,7 @@ export default function Header() {
 
               {/* Mobile: Ingresar solo si NO hay usuario (esto es independiente del nav desktop) */}
               {store.user ? (
-                <div className="border-t border-gray-700 pt-2 bg-transparent">
+                <div className="border-t border-gray-700 pt-2 ">
                   <div className="px-3 py-2 text-sm text-gray-300 ">Hola, {store.user.name}</div>
                   <button
                     onClick={() => { actions.logoutUser(); setIsMenuOpen(false); }}
