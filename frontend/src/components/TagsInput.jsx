@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Context } from '../js/store/appContext.jsx';
+
 
 export default function TagsInput({ value = [], onChange, placeholder = "Agregar y Enter" }) {
     const [input, setInput] = useState("")

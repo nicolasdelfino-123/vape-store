@@ -28,6 +28,7 @@ import OrderListPage from "./views/OrderListPage.jsx";
 import OrderDetailPage from "./views/OrderDetailPage.jsx";
 import AddressesPage from "./views/AddressesPage.jsx";
 import AccountDetailsPage from "./views/AccountDetailsPage.jsx";
+import LoginAdmin from "./views/LoginAdmin.jsx";
 
 const Layout = () => {
   const { store, actions } = useContext(Context);
@@ -74,6 +75,7 @@ const Layout = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/login" element={<LoginAdmin />} />
 
 
           {/* ===== Mi Cuenta con subrutas ===== */}

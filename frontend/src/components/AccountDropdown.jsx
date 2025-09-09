@@ -1,11 +1,12 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";   // 👈 importá useNavigate
 import { Context } from "../js/store/appContext.jsx";
 
 export default function AccountDropdown() {
     const { store, actions } = useContext(Context);
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
+    const navigate = useNavigate();  // 👈 inicializá navigate
 
     useEffect(() => {
         const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -48,6 +49,17 @@ export default function AccountDropdown() {
                         onClick={() => { actions.logoutUser(); setOpen(false); }}
                     >
                         Cerrar sesión
+                    </button>
+
+                    {/* Botón Admin con navigate funcionando */}
+                    <button
+                        onClick={() => {
+                            setOpen(false);
+                            navigate("/admin/login");
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                    >
+                        Admin
                     </button>
                 </div>
             )}
