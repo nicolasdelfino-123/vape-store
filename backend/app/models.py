@@ -65,7 +65,9 @@ class Product(db.Model):
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     # NUEVO: lista de sabores para pods desechables (opcional)
+   
     flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
+    flavor_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     # Campos adicionales para vapes
     puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Para desechables
     nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Nicotina
@@ -91,6 +93,7 @@ class Product(db.Model):
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,
             'flavors': self.flavors or [],
+            'flavor_enabled': self.flavor_enabled,
             'puffs': self.puffs,
             'nicotine_mg': self.nicotine_mg,
             'volume_ml': self.volume_ml,

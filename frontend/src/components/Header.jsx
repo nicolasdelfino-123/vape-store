@@ -4,11 +4,14 @@ import { Link } from "react-router-dom";
 import Cart from "../components/Cart.jsx";
 import AccountDropdown from "../components/AccountDropdown.jsx";
 
-
 export default function Header() {
   const { store, actions } = useContext(Context);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [productsDropdownOpen, setProductsDropdownOpen] = useState(false);
+
+  // Referencias para el dropdown
+  const productsDropdownRef = useRef(null);
 
   // shrink + mostrar/ocultar
   const [isScrolled, setIsScrolled] = useState(false);
@@ -23,6 +26,20 @@ export default function Header() {
   const LOGO_SCROLL_H = 340;
   const LOGO_W = "auto";
   const USE_WHITE_KILLER = false;
+
+  // Cerrar dropdown cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (productsDropdownRef.current && !productsDropdownRef.current.contains(event.target)) {
+        setProductsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -65,6 +82,16 @@ export default function Header() {
   }, []);
 
   const cartItemsCount = (store.cart || []).reduce((t, i) => t + (i.quantity || 0), 0);
+
+  // Categorías para el dropdown
+  const productCategories = [
+    { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
+    { name: "Pods Descartables", route: "/categoria/pods-descartables", icon: "🎯" },
+    { name: "Líquidos", route: "/categoria/liquidos", icon: "💧" },
+    { name: "Accesorios", route: "/categoria/accesorios", icon: "⚙️" },
+    { name: "Celulares", route: "/categoria/celulares", icon: "📱" },
+    { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
+  ];
 
   return (
     <header
@@ -119,7 +146,54 @@ export default function Header() {
           {/* Navigation - Desktop */}
           <nav className="hidden md:flex space-x-8">
             <Link to="/inicio" className="hover:text-purple-400 transition-colors text-gray-300">Inicio</Link>
-            <Link to="/products" className="hover:text-purple-400 transition-colors text-gray-300">Productos</Link>
+
+            {/* Dropdown de Productos */}
+            <div className="relative" ref={productsDropdownRef}>
+              <button
+                onClick={() => setProductsDropdownOpen(!productsDropdownOpen)}
+                className="flex items-center text-gray-300 hover:text-purple-400 bg-transparent p-0 border-0 rounded-none appearance-none focus:outline-none focus:ring-0 hover:bg-transparent active:bg-transparent"
+                style={{ backgroundColor: 'transparent', boxShadow: 'none' }}
+              >
+
+                Productos
+                <svg
+                  className={`ml-1 w-4 h-4 transition-transform ${productsDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {productsDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+
+                  <div className="py-2">
+                    <Link
+                      to="/products"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-medium border-b border-gray-100"
+                      onClick={() => setProductsDropdownOpen(false)}
+                    >
+                      Ver todos los productos
+                    </Link>
+                    {productCategories.map((category) => (
+                      <Link
+                        key={category.route}
+                        to={category.route}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        onClick={() => setProductsDropdownOpen(false)}
+                      >
+                        <span className="mr-3">{category.icon}</span>
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <a href="/#ofertas" className="hover:text-purple-400 transition-colors text-gray-300">Ofertas</a>
             <a href="/#contacto" className="hover:text-purple-400 transition-colors text-gray-300">Contacto</a>
           </nav>
@@ -179,13 +253,31 @@ export default function Header() {
               >
                 Inicio
               </Link>
-              <Link
-                to="/products"
-                className="block px-3 py-2 hover:text-purple-400 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Productos
-              </Link>
+
+              {/* Productos en mobile */}
+              <div className="px-3 py-2">
+                <span className="block text-gray-200 font-medium mb-2">Productos:</span>
+                <div className="ml-4 space-y-1">
+                  <Link
+                    to="/products"
+                    className="block px-3 py-1 text-sm hover:text-purple-400 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Ver todos
+                  </Link>
+                  {productCategories.map((category) => (
+                    <Link
+                      key={category.route}
+                      to={category.route}
+                      className="block px-3 py-1 text-sm hover:text-purple-400 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {category.icon} {category.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
               <a
                 href="/#ofertas"
                 className="block px-3 py-2 text-gray-200 hover:text-purple-400 transition-colors"
@@ -201,7 +293,7 @@ export default function Header() {
                 Contacto
               </a>
 
-              {/* Mobile: Ingresar solo si NO hay usuario (esto es independiente del nav desktop) */}
+              {/* Mobile: Ingresar solo si NO hay usuario */}
               {store.user ? (
                 <div className="border-t border-gray-700 pt-2 ">
                   <div className="px-3 py-2 text-sm text-gray-300 ">Hola, {store.user.name}</div>
