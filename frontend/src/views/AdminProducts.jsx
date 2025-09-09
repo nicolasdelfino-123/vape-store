@@ -4,83 +4,153 @@ const API = import.meta.env.VITE_BACKEND_URL
 
 export default function AdminProducts() {
     const [products, setProducts] = useState([])
-    const [categories, setCategories] = useState(["Desechables", "Recargables", "Celulares", "Perfumes"])
+    const [categories] = useState(["Vapes Desechables", "Pods", "Líquidos", "Accesorios", "Celulares", "Perfumes"])
     const [form, setForm] = useState(null)
     const [q, setQ] = useState("")
+    const [selectedCategory, setSelectedCategory] = useState("Todos")
 
-    const token = localStorage.getItem("admin_token")
+    // Al inicio del componente AdminProducts, cambia esta línea:
+    const token = localStorage.getItem("token") || localStorage.getItem("admin_token")
     if (!token) return <div className="p-6">No autorizado</div>
 
     const fetchAll = async () => {
-        const res = await fetch(`${API}/products?only_active=false`)
-        const data = await res.json()
-        setProducts(data || [])
+        try {
+            const res = await fetch(`${API}/admin/products`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setProducts(data || [])
+            }
+        } catch (error) {
+            console.error("Error fetching products:", error)
+        }
     }
 
     useEffect(() => { fetchAll() }, [])
 
     const save = async (e) => {
         e.preventDefault()
-        const method = form.id ? "PUT" : "POST"
-        const url = form.id ? `${API}/admin/products/${form.id}` : `${API}/admin/products`
-        await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form)
-        })
-        setForm(null)
-        fetchAll()
+        try {
+            const method = form.id ? "PUT" : "POST"
+            const url = form.id ? `${API}/admin/products/${form.id}` : `${API}/admin/products`
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(form)
+            })
+
+            if (res.ok) {
+                setForm(null)
+                fetchAll()
+                alert(form.id ? "Producto actualizado" : "Producto creado exitosamente")
+            } else {
+                const error = await res.json()
+                alert(`Error: ${error.error || 'No se pudo guardar el producto'}`)
+            }
+        } catch (error) {
+            console.error("Error saving product:", error)
+            alert("Error al guardar producto")
+        }
     }
 
-    const filtered = products.filter(p =>
-        !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.barcode === q
-    )
+    const filtered = products.filter(p => {
+        const matchesSearch = !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.brand?.toLowerCase().includes(q.toLowerCase())
+        const matchesCategory = selectedCategory === "Todos" || p.category_name === selectedCategory
+        return matchesSearch && matchesCategory
+    })
 
     return (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
             <h1 className="text-2xl font-bold mb-4">Admin Productos</h1>
 
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <input
-                    placeholder="Buscar por nombre o código"
+                    placeholder="Buscar por nombre o marca"
                     className="flex-1 border rounded px-3 py-2"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                 />
-                <button onClick={() => setForm({})} className="bg-emerald-600 text-white px-4 py-2 rounded">Nuevo</button>
+                <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="border rounded px-3 py-2 sm:w-48"
+                >
+                    <option value="Todos">Todas las categorías</option>
+                    {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
+                <button onClick={() => setForm({})} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
+                    Nuevo
+                </button>
             </div>
 
-            <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="p-2 text-left">Producto</th>
-                        <th className="p-2">Precio</th>
-                        <th className="p-2">Stock</th>
-                        <th className="p-2">Categoría</th>
-                        <th className="p-2"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filtered.map(p => (
-                        <tr key={p.id} className="border-t">
-                            <td className="p-2">{p.name}</td>
-                            <td className="p-2">${p.price}</td>
-                            <td className="p-2">{p.stock}</td>
-                            <td className="p-2">{p.category_name}</td>
-                            <td className="p-2 text-right">
-                                <button onClick={() => setForm(p)} className="px-2 border rounded">Editar</button>
-                            </td>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm border">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="p-2 text-left">Producto</th>
+                            <th className="p-2 text-left">Descripción</th>
+                            <th className="p-2">Precio</th>
+                            <th className="p-2">Stock</th>
+                            <th className="p-2">Categoría</th>
+                            <th className="p-2">Estado</th>
+                            <th className="p-2"></th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {filtered.map(p => (
+                            <tr key={p.id} className="border-t">
+                                <td className="p-2">
+                                    <div>
+                                        <div className="font-medium">{p.name}</div>
+                                        {p.brand && <div className="text-gray-500 text-xs">{p.brand}</div>}
+                                    </div>
+                                </td>
+                                <td className="p-2 max-w-xs">
+                                    <div className="truncate" title={p.description}>
+                                        {p.description || 'Sin descripción'}
+                                    </div>
+                                </td>
+                                <td className="p-2 text-center">${p.price}</td>
+                                <td className="p-2 text-center">{p.stock}</td>
+                                <td className="p-2 text-center">{p.category_name}</td>
+                                <td className="p-2 text-center">
+                                    <span className={`px-2 py-1 rounded text-xs ${p.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        {p.is_active ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                </td>
+                                <td className="p-2 text-right">
+                                    <button
+                                        onClick={() => setForm(p)}
+                                        className="px-3 py-1 border rounded hover:bg-gray-50"
+                                    >
+                                        Editar
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {filtered.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                    No se encontraron productos
+                </div>
+            )}
 
             {form && (
                 <form
                     onSubmit={save}
-                    className="fixed inset-0 bg-black/40 flex items-center justify-center"
+                    className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
                 >
-                    <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-3">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-3 max-h-[90vh] overflow-y-auto">
                         <h2 className="text-lg font-semibold">{form.id ? "Editar" : "Nuevo"} Producto</h2>
 
                         <input className="w-full border rounded px-3 py-2"
@@ -92,7 +162,11 @@ export default function AdminProducts() {
                             onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
                         <input className="w-full border rounded px-3 py-2"
-                            placeholder="Precio" type="number" value={form.price || ""}
+                            placeholder="Marca" value={form.brand || ""}
+                            onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+
+                        <input className="w-full border rounded px-3 py-2"
+                            placeholder="Precio" type="number" step="0.01" value={form.price || ""}
                             onChange={(e) => setForm({ ...form, price: e.target.value })} required />
 
                         <input className="w-full border rounded px-3 py-2"
@@ -100,27 +174,50 @@ export default function AdminProducts() {
                             onChange={(e) => setForm({ ...form, stock: e.target.value })} required />
 
                         <input className="w-full border rounded px-3 py-2"
-                            placeholder="Imagen (URL o /public/...)" value={form.image_url || ""}
+                            placeholder="URL de imagen" value={form.image_url || ""}
                             onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
 
+                        <input className="w-full border rounded px-3 py-2"
+                            placeholder="Puffs (ej: 5000)" type="number" value={form.puffs || ""}
+                            onChange={(e) => setForm({ ...form, puffs: e.target.value })} />
+
+                        <input className="w-full border rounded px-3 py-2"
+                            placeholder="Nicotina mg (ej: 25)" type="number" value={form.nicotine_mg || ""}
+                            onChange={(e) => setForm({ ...form, nicotine_mg: e.target.value })} />
+
+                        <input className="w-full border rounded px-3 py-2"
+                            placeholder="Volumen ml (ej: 60)" type="number" value={form.volume_ml || ""}
+                            onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
+
                         <select className="w-full border rounded px-3 py-2"
-                            value={form.category_name || ""}
-                            onChange={(e) => {
-                                if (e.target.value === "add") {
-                                    const newCat = prompt("Nueva categoría:")
-                                    if (newCat) setCategories([...categories, newCat])
-                                } else {
-                                    setForm({ ...form, category_name: e.target.value })
-                                }
-                            }}>
+                            value={form.category_id || ""}
+                            onChange={(e) => setForm({ ...form, category_id: parseInt(e.target.value) })}
+                            required>
                             <option value="">Selecciona categoría</option>
-                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                            <option value="add">+ Agregar nueva…</option>
+                            <option value={1}>Vapes Desechables</option>
+                            <option value={2}>Pods</option>
+                            <option value={3}>Líquidos</option>
+                            <option value={4}>Accesorios</option>
+                            <option value={5}>Celulares</option>
+                            <option value={6}>Perfumes</option>
                         </select>
 
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={form.is_active ?? true}
+                                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                            />
+                            Producto activo
+                        </label>
+
                         <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={() => setForm(null)} className="px-3 py-2 border rounded">Cancelar</button>
-                            <button type="submit" className="px-3 py-2 bg-purple-600 text-white rounded">Guardar</button>
+                            <button type="button" onClick={() => setForm(null)} className="px-3 py-2 border rounded">
+                                Cancelar
+                            </button>
+                            <button type="submit" className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                                Guardar
+                            </button>
                         </div>
                     </div>
                 </form>

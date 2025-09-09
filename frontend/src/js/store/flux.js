@@ -128,6 +128,110 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
+
+
+			// Login para administradores
+			adminLogin: async (email, password) => {
+				try {
+					const response = await fetch(`${backendUrl}/user/login`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ email, password })
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						return { success: false, error: errorData.error || "Login fallido" };
+					}
+
+					const data = await response.json();
+
+					if (data.access_token) {
+						// Verificar si es admin
+						try {
+							const userRes = await fetch(`${backendUrl}/user/me`, {
+								headers: { "Authorization": `Bearer ${data.access_token}` }
+							});
+							if (userRes.ok) {
+								const userData = await userRes.json();
+								if (userData.is_admin) {
+									localStorage.setItem("token", data.access_token);
+									localStorage.setItem("admin_token", data.access_token);
+									const store = getStore();
+									setStore({ ...store, user: userData });
+									return { success: true, data: userData, isAdmin: true };
+								} else {
+									return { success: false, error: "No tienes permisos de administrador" };
+								}
+							}
+						} catch (userError) {
+							console.log("Error obteniendo datos de usuario:", userError);
+						}
+					}
+
+					return { success: false, error: "Error en autenticación" };
+				} catch (error) {
+					return { success: false, error: "Error inesperado" };
+				}
+			},
+
+
+			// Obtener categorías desde la API
+			fetchCategoriesFromAPI: async () => {
+				const store = getStore();
+				setStore({ ...store, loading: true });
+
+				try {
+					const response = await fetch(`${backendUrl}/public/categories`);
+					if (!response.ok) {
+						throw new Error('Error al obtener categorías');
+					}
+					const categories = await response.json();
+					const categoryNames = categories.map(cat => cat.name);
+					setStore({ ...store, categories: categoryNames, loading: false });
+					return { success: true, data: categoryNames };
+				} catch (error) {
+					console.error("Error fetching categories:", error);
+					setStore({ ...store, loading: false });
+					return { success: false, error: error.message };
+				}
+			},
+
+			// Crear categoría desde admin
+			createCategory: async (categoryData) => {
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${backendUrl}/admin/categories`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"Authorization": `Bearer ${token}`
+						},
+						body: JSON.stringify(categoryData)
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.error || 'Error al crear categoría');
+					}
+
+					const category = await response.json();
+					return { success: true, data: category };
+				} catch (error) {
+					console.error("Error creating category:", error);
+					return { success: false, error: error.message };
+				}
+			},
+
+
+
+
+
+
+
+
 			hydrateSession: async () => {
 				const store = getStore();
 				const token = localStorage.getItem("token");

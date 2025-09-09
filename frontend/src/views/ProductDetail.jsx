@@ -7,7 +7,7 @@ const ProductDetail = () => {
     const navigate = useNavigate();
     const { store, actions } = useContext(Context);
     const [quantity, setQuantity] = useState(1);
-    const [selectedFlavor, setSelectedFlavor] = useState("")
+    const [selectedFlavor, setSelectedFlavor] = useState("");
 
 
     // Cargar productos si no están disponibles

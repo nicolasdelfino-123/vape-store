@@ -66,6 +66,10 @@ class Product(db.Model):
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     # NUEVO: lista de sabores para pods desechables (opcional)
     flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
+    # Campos adicionales para vapes
+    puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Para desechables
+    nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Nicotina
+    volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Volumen líquidos
 
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
 
@@ -87,6 +91,9 @@ class Product(db.Model):
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,
             'flavors': self.flavors or [],
+            'puffs': self.puffs,
+            'nicotine_mg': self.nicotine_mg,
+            'volume_ml': self.volume_ml,
             'created_at': self.created_at.isoformat(),
         }
 

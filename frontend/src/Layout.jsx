@@ -30,11 +30,15 @@ import AddressesPage from "./views/AddressesPage.jsx";
 import AccountDetailsPage from "./views/AccountDetailsPage.jsx";
 import LoginAdmin from "./views/LoginAdmin.jsx";
 
+
+
+
 const Layout = () => {
   const { store, actions } = useContext(Context);
   const basename = import.meta.env.VITE_BASENAME || "";
 
   // 🔥 MEJORAR: Hidratar sesión al cargar la app
+
   useEffect(() => {
     const initializeApp = async () => {
       console.log("🚀 Inicializando aplicación...");
@@ -45,7 +49,13 @@ const Layout = () => {
         await actions.hydrateSession();
       }
 
-      // 2. Cargar productos si no están cargados
+      // 2. Cargar categorías desde API
+      if (actions.fetchCategoriesFromAPI) {
+        console.log("📂 Cargando categorías...");
+        await actions.fetchCategoriesFromAPI();
+      }
+
+      // 3. Cargar productos si no están cargados
       if (actions.fetchProducts && (!store.products || store.products.length === 0)) {
         console.log("📦 Cargando productos...");
         await actions.fetchProducts();
@@ -76,6 +86,12 @@ const Layout = () => {
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
+
+          {/* Rutas por categoría */}
+          <Route path="/categoria/pods-recargables" element={<ProductGrid category="Pods" />} />
+          <Route path="/categoria/celulares" element={<ProductGrid category="Celulares" />} />
+          <Route path="/categoria/pods-descartables" element={<ProductGrid category="Vapes Desechables" />} />
+          <Route path="/categoria/perfumes" element={<ProductGrid category="Perfumes" />} />
 
 
           {/* ===== Mi Cuenta con subrutas ===== */}
