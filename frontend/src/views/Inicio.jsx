@@ -79,8 +79,9 @@ function Inicio() {
                                     />
                                 </svg>
                             </div>
-                            <h3 className="text-lg sm:text-xl font-semibold mb-2">Envío Gratis</h3>
-                            <p className="text-sm sm:text-base text-gray-600">En compras superiores a $15.000</p>
+                            <h3 className="text-lg sm:text-xl font-semibold mb-2">Envío con seguimiento
+                            </h3>
+                            <p className="text-sm sm:text-base text-gray-600">Te compartimos el tracking de tu pedido</p>
                         </div>
 
                         <div className="text-center">
@@ -171,7 +172,137 @@ function Inicio() {
     }
   `}</style>
             </section>
+            {/* Categorías (cards con imagen + botón VER) */}
+            <section className="py-6 md:py-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
+                        {/* PODS RECARGABLES */}
+                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                            <div
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                                style={{ backgroundImage: "url(/recargables.png)" }}
+                                aria-hidden
+                            />
+                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="relative h-full flex items-center">
+                                <div className="px-5">
+                                    <Link
+                                        to="/categoria/pods-recargables"
+                                        className="inline-block"
+                                        aria-label="Ir a Pods Recargables"
+                                    >
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                            PODS<br />RECARGABLES
+                                        </h3>
+                                    </Link>
+                                    <Link
+                                        to="/categoria/pods-recargables"
+                                        className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded"
+                                    >
+                                        VER
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CELULARES */}
+                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                            <div
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                                style={{ backgroundImage: "url(/celu.png)" }}
+                                aria-hidden
+                            />
+                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+
+                            {/* dentro de la card */}
+                            <div className="relative h-full flex items-start">   {/* nada de items-center */}
+                                <div className="px-5 py-4 flex flex-col gap-2 h-full">  {/* columna con pequeño gap */}
+                                    <Link
+                                        to="/categoria/celulares"
+                                        className="block"
+                                        aria-label="Ir a Celulares"
+                                    >
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                            CELULARES
+                                        </h3>
+                                    </Link>
+
+                                    <Link
+                                        to="/categoria/celulares"
+                                        className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded"
+                                    >
+                                        VER
+                                    </Link>
+                                </div>
+                            </div>
+
+
+                        </div>
+
+                        {/* PODS DESCARTABLES */}
+                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                            <div
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                                style={{ backgroundImage: "url(/desechables.png)" }}
+                                aria-hidden
+                            />
+                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="relative h-full flex items-center">
+                                <div className="px-5">
+                                    <Link
+                                        to="/categoria/pods-descartables"
+                                        className="inline-block"
+                                        aria-label="Ir a Pods Descartables"
+                                    >
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                            PODS<br />DESCARTABLES
+                                        </h3>
+                                    </Link>
+                                    <Link
+                                        to="/categoria/pods-descartables"
+                                        className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded"
+                                    >
+                                        VER
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* PERFUMES */}
+                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                            <div
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                                style={{ backgroundImage: "url(/perfumes.png)" }}
+                                aria-hidden
+                            />
+                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="relative h-full flex items-start">
+                                <div className="px-5 py-4 flex flex-col gap-2">
+                                    <Link
+                                        to="/categoria/perfumes"
+                                        className="block"
+                                        aria-label="Ir a Perfumes"
+                                    >
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                            PERFUMES
+                                        </h3>
+                                    </Link>
+
+                                    <Link
+                                        to="/categoria/perfumes"
+                                        className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded"
+                                    >
+                                        VER
+                                    </Link>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </section>
 
             {/* Products Section */}
             <section id="productos" className="py-8 md:py-16">
