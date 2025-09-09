@@ -3,9 +3,20 @@ import { Context } from "../js/store/appContext"
 import { useNavigate } from "react-router-dom"
 
 export default function ProductCard({ product }) {
+  // === CONFIGURACIONES GLOBALES ===
+  const HIDE_WHEN_NO_STOCK = true
+  const IMAGE_RATIO = "aspect-square"
+  // Cambia a "aspect-square" (1:1), "aspect-[4/5]", etc según quieras el alto de las imágenes
+
   const [quantity, setQuantity] = useState(1)
   const { actions } = useContext(Context)
   const navigate = useNavigate()
+
+  const stock = Number(product?.stock ?? 0)
+  const hasStock = stock > 0
+
+  // Ocultar la card si no hay stock (pero mantenerla en la BD)
+  if (!hasStock && HIDE_WHEN_NO_STOCK) return null
 
   const handleAddToCart = () => {
     if (actions && actions.addToCart) {
@@ -20,9 +31,9 @@ export default function ProductCard({ product }) {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Imagen clickeable */}
+      {/* Imagen clickeable con ratio fijo */}
       <div
-        className="w-full h-48 bg-gray-200 cursor-pointer"
+        className={`w-full bg-gray-200 cursor-pointer ${IMAGE_RATIO}`}
         onClick={handleProductClick}
       >
         <img
@@ -46,11 +57,14 @@ export default function ProductCard({ product }) {
           <span className="text-sm text-gray-500">{product.category_name}</span>
         </div>
 
+        {/* Línea de stock, comentada como pediste */}
+        {/*
         <div className="text-sm text-gray-600 mb-3">
-          Stock: {product.stock || 0}
+          Stock: {stock}
         </div>
+        */}
 
-        {(product.stock || 0) > 0 ? (
+        {hasStock ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Cantidad:</label>
@@ -59,7 +73,7 @@ export default function ProductCard({ product }) {
                 onChange={(e) => setQuantity(Number(e.target.value))}
                 className="border border-gray-300 rounded px-2 py-1 text-sm"
               >
-                {[...Array(Math.min(product.stock || 1, 10))].map((_, i) => (
+                {[...Array(Math.min(stock || 1, 10))].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {i + 1}
                   </option>
