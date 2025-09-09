@@ -3,6 +3,7 @@ from sqlalchemy import String, Boolean, ForeignKey, DateTime, Integer, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 from typing import Optional
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class User(db.Model):
@@ -51,6 +52,8 @@ class Category(db.Model):
         }
 
 
+
+
 class Product(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -61,13 +64,16 @@ class Product(db.Model):
     brand: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
+    # NUEVO: lista de sabores para pods desechables (opcional)
+    flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
-    
+
     # Relaciones
     category: Mapped["Category"] = relationship("Category", back_populates="products")
     cart_items: Mapped[list["CartItem"]] = relationship("CartItem", back_populates="product")
     order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="product")
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -80,8 +86,10 @@ class Product(db.Model):
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,
+            'flavors': self.flavors or [],
             'created_at': self.created_at.isoformat(),
         }
+
 
 
 class CartItem(db.Model):
