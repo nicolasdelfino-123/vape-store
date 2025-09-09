@@ -7,6 +7,8 @@ const ProductDetail = () => {
     const navigate = useNavigate();
     const { store, actions } = useContext(Context);
     const [quantity, setQuantity] = useState(1);
+    const [selectedFlavor, setSelectedFlavor] = useState("")
+
 
     // Cargar productos si no están disponibles
     useEffect(() => {
@@ -91,6 +93,19 @@ const ProductDetail = () => {
                                 <p className="text-sm text-gray-500 mb-2">Stock disponible: {product.stock} unidades</p>
                                 <p className="text-sm text-gray-500">Categoría: {product.category_name}</p>
                             </div>
+                            {Array.isArray(product.flavors) && product.flavors.length > 0 && (
+                                <div className="mb-4">
+                                    <label className="mb-1 block text-sm font-medium">Sabor</label>
+                                    <select
+                                        className="w-full rounded border px-3 py-2"
+                                        value={selectedFlavor}
+                                        onChange={(e) => setSelectedFlavor(e.target.value)}
+                                    >
+                                        <option value="">Seleccionar sabor…</option>
+                                        {product.flavors.map(f => <option key={f} value={f}>{f}</option>)}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Cantidad y agregar al carrito */}
                             <div className="flex items-center space-x-4 mb-6">

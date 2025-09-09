@@ -19,6 +19,7 @@ import Cart from "./components/Cart.jsx";
 import ProductGrid from "./components/ProductGrid.jsx";
 import Header from "./components/Header.jsx";
 import Toast from "./components/Toast.jsx";
+import AdminProducts from "./views/AdminProducts.jsx";
 
 // Páginas de "Mi Cuenta"
 import AccountLayout from "./views/AccountLayout.jsx";
@@ -72,6 +73,8 @@ const Layout = () => {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+
 
           {/* ===== Mi Cuenta con subrutas ===== */}
           <Route path="/cuenta" element={<AccountLayout />}>
