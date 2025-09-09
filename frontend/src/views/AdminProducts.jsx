@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import TagsInput from "../components/TagsInput.jsx" // Reutilizar el componente existente
 
 const API = import.meta.env.VITE_BACKEND_URL
 
@@ -9,7 +10,6 @@ export default function AdminProducts() {
     const [q, setQ] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("Todos")
 
-    // Al inicio del componente AdminProducts, cambia esta línea:
     const token = localStorage.getItem("token") || localStorage.getItem("admin_token")
     if (!token) return <div className="p-6">No autorizado</div>
 
@@ -58,6 +58,12 @@ export default function AdminProducts() {
         }
     }
 
+    // Función para determinar si debe mostrar sabores según categoría
+    const shouldShowFlavors = (categoryId) => {
+        // 1: Vapes Desechables, 3: Líquidos (según tu configuración)
+        return [1, 3].includes(Number(categoryId))
+    }
+
     const filtered = products.filter(p => {
         const matchesSearch = !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.brand?.toLowerCase().includes(q.toLowerCase())
         const matchesCategory = selectedCategory === "Todos" || p.category_name === selectedCategory
@@ -85,7 +91,7 @@ export default function AdminProducts() {
                         <option key={cat} value={cat}>{cat}</option>
                     ))}
                 </select>
-                <button onClick={() => setForm({})} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
+                <button onClick={() => setForm({ category_id: 1 })} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
                     Nuevo
                 </button>
             </div>
@@ -99,6 +105,7 @@ export default function AdminProducts() {
                             <th className="p-2">Precio</th>
                             <th className="p-2">Stock</th>
                             <th className="p-2">Categoría</th>
+                            <th className="p-2">Sabores</th>
                             <th className="p-2">Estado</th>
                             <th className="p-2"></th>
                         </tr>
@@ -120,6 +127,15 @@ export default function AdminProducts() {
                                 <td className="p-2 text-center">${p.price}</td>
                                 <td className="p-2 text-center">{p.stock}</td>
                                 <td className="p-2 text-center">{p.category_name}</td>
+                                <td className="p-2 text-center">
+                                    {p.flavor_enabled ? (
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                            {p.flavors?.length || 0} sabores
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-gray-500">Sin sabores</span>
+                                    )}
+                                </td>
                                 <td className="p-2 text-center">
                                     <span className={`px-2 py-1 rounded text-xs ${p.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                         {p.is_active ? 'Activo' : 'Inactivo'}
@@ -177,21 +193,17 @@ export default function AdminProducts() {
                             placeholder="URL de imagen" value={form.image_url || ""}
                             onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
 
-                        <input className="w-full border rounded px-3 py-2"
-                            placeholder="Puffs (ej: 5000)" type="number" value={form.puffs || ""}
-                            onChange={(e) => setForm({ ...form, puffs: e.target.value })} />
-
-                        <input className="w-full border rounded px-3 py-2"
-                            placeholder="Nicotina mg (ej: 25)" type="number" value={form.nicotine_mg || ""}
-                            onChange={(e) => setForm({ ...form, nicotine_mg: e.target.value })} />
-
-                        <input className="w-full border rounded px-3 py-2"
-                            placeholder="Volumen ml (ej: 60)" type="number" value={form.volume_ml || ""}
-                            onChange={(e) => setForm({ ...form, volume_ml: e.target.value })} />
-
                         <select className="w-full border rounded px-3 py-2"
                             value={form.category_id || ""}
-                            onChange={(e) => setForm({ ...form, category_id: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                                const categoryId = parseInt(e.target.value)
+                                setForm({
+                                    ...form,
+                                    category_id: categoryId,
+                                    flavor_enabled: shouldShowFlavors(categoryId),
+                                    flavors: shouldShowFlavors(categoryId) ? (form.flavors || []) : []
+                                })
+                            }}
                             required>
                             <option value="">Selecciona categoría</option>
                             <option value={1}>Vapes Desechables</option>
@@ -201,6 +213,34 @@ export default function AdminProducts() {
                             <option value={5}>Celulares</option>
                             <option value={6}>Perfumes</option>
                         </select>
+
+                        {/* MOSTRAR SABORES SOLO PARA DESECHABLES Y LÍQUIDOS */}
+                        {shouldShowFlavors(form.category_id) && (
+                            <>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.flavor_enabled ?? true}
+                                        onChange={(e) => setForm({ ...form, flavor_enabled: e.target.checked })}
+                                    />
+                                    Habilitar selector de sabores
+                                </label>
+
+                                {form.flavor_enabled && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Sabores disponibles</label>
+                                        <TagsInput
+                                            value={form.flavors || []}
+                                            onChange={(flavors) => setForm({ ...form, flavors })}
+                                            placeholder="Agregar sabor y presionar Enter"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Ej: Fresa, Menta, Vainilla, etc.
+                                        </p>
+                                    </div>
+                                )}
+                            </>
+                        )}
 
                         <label className="flex items-center gap-2">
                             <input

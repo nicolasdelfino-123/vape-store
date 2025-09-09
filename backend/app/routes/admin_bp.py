@@ -22,7 +22,7 @@ def admin_required():
 @jwt_required()
 def create_product():
     if not admin_required():
-        return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador.'}), 403
+        return jsonify({'error': 'Acceso denegado.'}), 403
     try:
         data = request.get_json() or {}
         required = ['name','price','stock','category_id']
@@ -39,7 +39,8 @@ def create_product():
             image_url=data.get('image_url', ''),
             brand=data.get('brand', ''),
             is_active=bool(data.get('is_active', True)),
-            flavors=data.get('flavors', []) or []
+            flavors=data.get('flavors', []) or [],
+            flavor_enabled=bool(data.get('flavor_enabled', False))  # NUEVO CAMPO
         )
         db.session.add(product)
         db.session.commit()
@@ -52,7 +53,7 @@ def create_product():
 @jwt_required()
 def update_product(product_id):
     if not admin_required():
-        return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador.'}), 403
+        return jsonify({'error': 'Acceso denegado.'}), 403
     try:
         data = request.get_json() or {}
         product = Product.query.get(product_id)
@@ -64,18 +65,18 @@ def update_product(product_id):
             if field in data:
                 setattr(product, field, data[field] or '')
 
-        if 'price' in data:  product.price  = float(data['price'])
-        if 'stock' in data:  product.stock  = int(data['stock'])
+        if 'price' in data: product.price = float(data['price'])
+        if 'stock' in data: product.stock = int(data['stock'])
         if 'category_id' in data: product.category_id = int(data['category_id'])
         if 'is_active' in data: product.is_active = bool(data['is_active'])
         if 'flavors' in data: product.flavors = data.get('flavors', []) or []
+        if 'flavor_enabled' in data: product.flavor_enabled = bool(data['flavor_enabled'])  # NUEVO
 
         db.session.commit()
         return jsonify({'message': 'Producto actualizado exitosamente', 'product': product.serialize()}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar producto: {str(e)}'}), 500
-
 
 @admin_bp.route('/products/<int:product_id>', methods=['DELETE'])
 @jwt_required()

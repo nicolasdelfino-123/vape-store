@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom"
 
 export default function ProductCard({ product }) {
   const HIDE_WHEN_NO_STOCK = true
-  const IMAGE_RATIO = "aspect-square" // cambiá aquí el tamaño global
+  const IMAGE_RATIO = "aspect-square"
 
   const [quantity, setQuantity] = useState(1)
+  const [selectedFlavor, setSelectedFlavor] = useState("")
   const { actions } = useContext(Context)
   const navigate = useNavigate()
 
@@ -15,8 +16,13 @@ export default function ProductCard({ product }) {
   if (!hasStock && HIDE_WHEN_NO_STOCK) return null
 
   const handleAddToCart = () => {
-    if (actions?.addToCart) { actions.addToCart(product, quantity); setQuantity(1) }
+    if (actions?.addToCart) {
+      actions.addToCart({ ...product, selectedFlavor }, quantity)
+      setQuantity(1)
+      setSelectedFlavor("")
+    }
   }
+
   const handleProductClick = () => navigate(`/product/${product.id}`)
 
   return (
@@ -36,16 +42,22 @@ export default function ProductCard({ product }) {
           <span className="text-sm text-gray-500">{product.category_name}</span>
         </div>
 
-        {Array.isArray(product.flavors) && product.flavors.length > 0 && (
-          <div className="mb-3 text-xs text-gray-600">{product.flavors.length} sabores</div>
+        {/* SELECTOR DE SABORES - SOLO SI ESTÁ HABILITADO */}
+        {product.flavor_enabled && Array.isArray(product.flavors) && product.flavors.length > 0 && (
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sabor</label>
+            <select
+              value={selectedFlavor}
+              onChange={(e) => setSelectedFlavor(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Elige una opción</option>
+              {product.flavors.map(flavor => (
+                <option key={flavor} value={flavor}>{flavor}</option>
+              ))}
+            </select>
+          </div>
         )}
-
-        {/* Línea de stock comentada como pediste */}
-        {/*
-        <div className="text-sm text-gray-600 mb-3">
-          Stock: {stock}
-        </div>
-        */}
 
         {hasStock ? (
           <div className="space-y-3">
@@ -55,7 +67,11 @@ export default function ProductCard({ product }) {
                 {[...Array(Math.min(stock || 1, 10))].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
               </select>
             </div>
-            <button onClick={handleAddToCart} className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors font-medium">
+            <button
+              onClick={handleAddToCart}
+              disabled={product.flavor_enabled && product.flavors?.length > 0 && !selectedFlavor}
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Agregar al Carrito
             </button>
           </div>
