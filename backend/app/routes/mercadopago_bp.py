@@ -1,7 +1,6 @@
 # backend/app/routes/mercadopago_bp.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, jwt_required
-
 import mercadopago
 import os
 from datetime import datetime
@@ -11,9 +10,10 @@ from ..database import db
 mercadopago_bp = Blueprint('mercadopago', __name__)
 
 def get_mp_sdk():
-    """Obtener SDK de MercadoPago correctamente"""
+    """Obtener SDK de MercadoPago correctamente (usa TEST en dev)"""
     access_token = os.getenv('MERCADOPAGO_ACCESS_TOKEN')
     if not access_token:
+        # No levantes excepción genérica: devolvemos mensaje claro al caller
         raise RuntimeError("MERCADOPAGO_ACCESS_TOKEN no configurado en .env")
     return mercadopago.SDK(access_token)
 
@@ -22,9 +22,7 @@ def get_mp_sdk():
 def create_preference():
     """Crear preferencia de pago en MercadoPago (JWT opcional)"""
     try:
-        print("=== INICIO CREATE PREFERENCE ===")
-
-        # JWT opcional: si hay token válido, tomamos el user_id; si no, seguimos como invitado
+        # JWT opcional
         try:
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
@@ -32,55 +30,61 @@ def create_preference():
             user_id = None
 
         data = request.get_json() or {}
+        print("=== INICIO CREATE PREFERENCE ===")
         print(f"User ID: {user_id}")
         print(f"Request data: {data}")
 
-        # Validar datos requeridos
-        if not data.get('items') or not data.get('payer'):
-            print("ERROR: Items y payer son requeridos")
-            return jsonify({'error': 'Items y payer son requeridos'}), 400
+        # Validaciones mínimas
+        if not data.get('items'):
+            return jsonify({'error': 'Items requeridos'}), 400
+        if not (data.get('payer') and data['payer'].get('email')):
+            return jsonify({'error': 'Email del payer es requerido'}), 400
 
-        # Validar estructura mínima de items
-        items = data['items']
-        for item in items:
-            if not all(k in item for k in ['id', 'title', 'quantity', 'unit_price']):
+        # Normalización de items (evita 422)
+        items = []
+        for it in data['items']:
+            if not all(k in it for k in ['title', 'quantity', 'unit_price']):
                 return jsonify({'error': 'Items con formato incorrecto'}), 400
-
-        # Normalizar items (evita 422 por tipos o precios inválidos)
-        for it in items:
-            it['quantity'] = int(it.get('quantity', 1) or 1)
-            it['unit_price'] = float(it.get('unit_price', 0) or 0)
-            if it['unit_price'] <= 0:
+            qty = int(it.get('quantity', 1) or 1)
+            price = float(it.get('unit_price', 0) or 0)
+            if price <= 0:
                 return jsonify({'error': 'unit_price debe ser > 0'}), 400
 
+            items.append({
+                "id": str(it.get("id") or it.get("sku") or "item"),
+                "title": str(it["title"]),
+                "quantity": qty,
+                "unit_price": price,
+                "currency_id": "ARS",  # fuerza ARS y evitás rechazos por currency
+            })
+
         print(f"Items validados/normalizados: {items}")
-        print(f"Payer: {data.get('payer')}")
 
-        # URL base para back_urls (no hardcodear localhost)
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5174')
-
-        # Construir preferencia
+        # back_urls coherentes con tu front
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
         preference_data = {
             "items": items,
             "payer": {
+                "email": data['payer']['email'],
                 "name": data['payer'].get('name', ''),
                 "surname": data['payer'].get('surname', ''),
-                "email": data['payer']['email']
             },
             "back_urls": {
                 "success": f"{frontend_url}/checkout/success",
                 "failure": f"{frontend_url}/checkout/failure",
                 "pending": f"{frontend_url}/checkout/pending"
             },
-            "auto_return": "approved"
+            "auto_return": "approved",
+            "external_reference": data.get("external_reference") or f"cart-{(user_id or 'guest')}-{int(datetime.utcnow().timestamp())}",
+            # Opcional: notificaciones en dev
+            # "notification_url": f"{os.getenv('BACKEND_URL', 'http://localhost:5000')}/api/mercadopago/webhook",
         }
 
         print(f"Preference data final: {preference_data}")
 
-        # Crear preferencia en MP
+        # Crear preferencia
         sdk = get_mp_sdk()
         print("SDK inicializado correctamente")
-
         preference_response = sdk.preference().create(preference_data)
         print(f"MP Response completa: {preference_response}")
 
@@ -93,22 +97,24 @@ def create_preference():
                 'sandbox_init_point': preference.get('sandbox_init_point', preference['init_point'])
             }), 201
 
-        print(f"ERROR MP: Status {preference_response.get('status')}")
-        print(f"Error details: {preference_response}")
+        # Si no es 201, devolvemos el error crudo para que lo veas en el alert
+        status = preference_response.get('status', 400)
         return jsonify({
             'error': 'Error creando preferencia en MercadoPago',
             'details': preference_response
-        }), 400
+        }), status
+
+    except RuntimeError as e:
+        # Error de config (tokens)
+        print(f"Config error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
     except Exception as e:
-        print(f"EXCEPCIÓN en create_preference: {str(e)}")
-        print(f"Tipo de error: {type(e)}")
         import traceback
+        print(f"EXCEPCIÓN en create_preference: {str(e)}")
         print(f"Traceback: {traceback.format_exc()}")
-        return jsonify({
-            'error': 'Error interno del servidor',
-            'details': str(e)
-        }), 500
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+
 
 @mercadopago_bp.route('/webhook', methods=['POST'])
 def webhook():

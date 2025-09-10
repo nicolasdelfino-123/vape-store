@@ -9,17 +9,22 @@ const Checkout = () => {
     const navigate = useNavigate()
 
     // Inicializar MercadoPago con tu Public Key
-    // Inicializar MercadoPago con tu Public Key desde .env
+    // Inicializar MercadoPago con tu Public Key desde .env (sin fallback a prod)
     useEffect(() => {
         try {
-            const pk = import.meta.env.VITE_MP_PUBLIC_KEY || 'APP_USR-acc60b41-c0b2-4af3-af72-28a78f673102'
-            console.log('Inicializando MercadoPago SDK...')
+            const pk = import.meta.env.VITE_MP_PUBLIC_KEY
+            if (!pk) {
+                console.error('Falta VITE_MP_PUBLIC_KEY en el .env del frontend')
+                alert('Configura VITE_MP_PUBLIC_KEY en el frontend (.env)')
+                return
+            }
+            console.log('Inicializando MercadoPago SDK con clave TEST…')
             initMercadoPago(pk, { locale: 'es-AR' })
-            console.log('MercadoPago SDK inicializado correctamente')
-        } catch (error) {
-            console.error('Error inicializando MercadoPago SDK:', error)
+        } catch (err) {
+            console.error('Error inicializando MercadoPago:', err)
         }
     }, [])
+
 
 
     const [customerData, setCustomerData] = useState({
@@ -60,8 +65,7 @@ const Checkout = () => {
                 throw new Error('El carrito está vacío')
             }
 
-            // Preparar items con el formato correcto de MercadoPago
-            // Preparar items con el formato correcto de MercadoPago
+            // Items en formato correcto
             const items = store.cart.map((item) => {
                 const qty = Math.max(1, parseInt(item.quantity || 1, 10))
                 const price = Number(item.price)
@@ -73,50 +77,21 @@ const Checkout = () => {
                     title: item.name,
                     quantity: qty,
                     unit_price: price,
-                    currency_id: 'ARS'
+                    // currency_id lo pone el backend; si querés redundar:
+                    // currency_id: 'ARS',
                 }
             })
 
-
-            console.log('Items preparados:', items)
-
-            // Validar que todos los campos requeridos estén completos
-            if (!customerData.firstName || !customerData.lastName || !customerData.email ||
-                !customerData.phone || !customerData.address || !customerData.city || !customerData.zipCode) {
-                throw new Error('Por favor completa todos los campos requeridos')
-            }
-
+            // Estructura mínima requerida por tu backend
             const preferenceData = {
                 items,
                 payer: {
-                    name: customerData.firstName,
-                    surname: customerData.lastName,
                     email: customerData.email,
-                    phone: {
-                        area_code: '11',
-                        number: customerData.phone.replace(/[^0-9]/g, '') // Solo números
-                    },
-                    address: {
-                        street_name: `${customerData.address}, ${customerData.city}`,
-                        zip_code: customerData.zipCode
-                    }
+                    name: customerData.firstName || '',
+                    surname: customerData.lastName || ''
                 },
-                back_urls: {
-                    success: `${window.location.origin}/checkout/success`,
-                    failure: `${window.location.origin}/checkout/failure`,
-                    pending: `${window.location.origin}/checkout/pending`
-                },
-                auto_return: 'approved',
-                payment_methods: {
-                    excluded_payment_methods: [],
-                    excluded_payment_types: [],
-                    installments: 12
-                },
-                statement_descriptor: 'ZARPADOS VAPS',
-                external_reference: `order_${Date.now()}_${store.user?.id || 'guest'}`
+                // El backend setea back_urls; no es obligatorio mandarlas desde acá.
             }
-
-            console.log('Preference data enviada:', preferenceData)
 
             const token = localStorage.getItem('token')
             const headers = token
@@ -134,14 +109,8 @@ const Checkout = () => {
             if (!response.ok) {
                 const errorText = await response.text()
                 console.error('Response error:', errorText)
-
                 let errorData
-                try {
-                    errorData = JSON.parse(errorText)
-                } catch {
-                    errorData = { error: errorText }
-                }
-
+                try { errorData = JSON.parse(errorText) } catch { errorData = { error: errorText } }
                 throw new Error(errorData.error || `Error HTTP ${response.status}`)
             }
 
@@ -162,6 +131,7 @@ const Checkout = () => {
             setLoading(false)
         }
     }
+
 
     const isFormValid = () => {
         return customerData.email &&

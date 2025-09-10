@@ -42,20 +42,29 @@ def create_user():
 @user_bp.route('/login', methods=['POST'])
 def get_token():
     try:
-
         email = request.json.get('email')
         password = request.json.get('password')
+        
+        print(f"=== LOGIN ATTEMPT ===")
+        print(f"Email: {email}")
+        print(f"Password received: {'Yes' if password else 'No'}")
 
         if not email or not password:
+            print("ERROR: Email or password missing")
             return jsonify({'error': 'Email and password are required.'}), 400
         
         login_user = User.query.filter_by(email=email).first()
+        print(f"User found in DB: {'Yes' if login_user else 'No'}")
 
         if not login_user:
+            print("ERROR: User not found")
             return jsonify({'error': 'El email proporcionado no corresponde a ninguno registrado'}), 404
 
         password_from_db = login_user.password
+        print(f"Password hash from DB: {password_from_db[:20]}...")
+        
         true_o_false = bcrypt.check_password_hash(password_from_db, password)
+        print(f"Password verification result: {true_o_false}")
         
         if true_o_false:
             expires = timedelta(minutes=30)
@@ -65,13 +74,18 @@ def get_token():
             additional_claims = { "role": role}
 
             access_token = create_access_token(identity=str(user_id), additional_claims=additional_claims, expires_delta=expires)
+            print(f"LOGIN SUCCESS for user {user_id}")
             return jsonify({ 'access_token':access_token, 'role': role}), 200
 
         else:
+            print("ERROR: Password incorrect")
             return {"Error":"Contraseña  incorrecta"}, 401
     
     except Exception as e:
-        return {"Error":"El email proporcionado no corresponde a ninguno registrado: " + str(e)}, 500
+        print(f"EXCEPCIÓN en login: {str(e)}")
+        import traceback
+        print(f"Traceback completo: {traceback.format_exc()}")
+        return jsonify({"Error":"Error interno del servidor: " + str(e)}), 500
     
     
 @user_bp.route('/users')
