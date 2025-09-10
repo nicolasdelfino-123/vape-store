@@ -102,6 +102,7 @@ export default function AdminProducts() {
                         <tr>
                             <th className="p-2 text-left">Producto</th>
                             <th className="p-2 text-left">Descripción</th>
+                            <th className="p-2 text-left">Descripción breve</th>
                             <th className="p-2">Precio</th>
                             <th className="p-2">Stock</th>
                             <th className="p-2">Categoría</th>
@@ -119,9 +120,17 @@ export default function AdminProducts() {
                                         {p.brand && <div className="text-gray-500 text-xs">{p.brand}</div>}
                                     </div>
                                 </td>
+                                {/* Descripción larga */}
                                 <td className="p-2 max-w-xs">
                                     <div className="truncate" title={p.description}>
-                                        {p.description || 'Sin descripción'}
+                                        {p.description || "Sin descripción"}
+                                    </div>
+                                </td>
+
+                                {/* Descripción breve */}
+                                <td className="p-2 max-w-xs">
+                                    <div className="truncate" title={p.short_description}>
+                                        {p.short_description || "Sin descripción breve"}
                                     </div>
                                 </td>
                                 <td className="p-2 text-center">${p.price}</td>
@@ -174,6 +183,20 @@ export default function AdminProducts() {
                         <input className="w-full border rounded px-3 py-2"
                             placeholder="Nombre" value={form.name || ""}
                             onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                        {/* Descripción breve (subtítulo) */}
+                        <label htmlFor="short_description" className="block text-sm font-medium text-gray-700 mb-1">
+                            Descripción breve
+                        </label>
+                        <textarea
+                            id="short_description"
+                            className="w-full border rounded px-3 py-2"
+                            placeholder="Subtítulo (máx. 200 caracteres)"
+                            rows={2}
+                            maxLength={200}
+                            value={form.short_description || ""}
+                            onChange={(e) => setForm({ ...form, short_description: e.target.value })}
+                        />
+
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                             Descripción
                         </label>

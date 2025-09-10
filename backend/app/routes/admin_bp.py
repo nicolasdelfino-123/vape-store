@@ -33,6 +33,7 @@ def create_product():
         product = Product(
             name=data['name'],
             description=data.get('description', ''),
+            short_description=data.get('short_description', ''),  # 👈 NUEVO
             price=float(data['price']),
             stock=int(data['stock']),
             category_id=int(data['category_id']),
@@ -61,7 +62,7 @@ def update_product(product_id):
             return jsonify({'error': 'Producto no encontrado'}), 404
 
         # Actualizaciones parciales
-        for field in ['name','description','brand','image_url']:
+        for field in ['name','description','short_description','brand','image_url']:
             if field in data:
                 setattr(product, field, data[field] or '')
 

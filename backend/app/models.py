@@ -58,6 +58,9 @@ class Product(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    short_description: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
     price: Mapped[float] = mapped_column(Float, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -85,6 +88,7 @@ class Product(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
+            'short_description': self.short_description,
             'price': self.price,
             'stock': self.stock,
             'image_url': self.image_url,

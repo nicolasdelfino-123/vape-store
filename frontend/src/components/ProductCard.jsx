@@ -16,12 +16,25 @@ export default function ProductCard({ product }) {
   if (!hasStock && HIDE_WHEN_NO_STOCK) return null
 
   const handleAddToCart = () => {
-    if (actions?.addToCart) {
-      actions.addToCart({ ...product, selectedFlavor }, quantity)
-      setQuantity(1)
-      setSelectedFlavor("")
+    const hasFlavors = product.flavor_enabled && Array.isArray(product.flavors) && product.flavors.length > 0;
+
+    // Si el producto tiene sabores y NO eligió uno -> ir al detalle
+    if (hasFlavors && !selectedFlavor) {
+      navigate(`/product/${product.id}`);
+      return;
     }
-  }
+
+    // Si no tiene sabores o ya eligió uno -> agregar directo
+    if (actions?.addToCart) {
+      actions.addToCart(
+        { ...product, selectedFlavor: hasFlavors ? selectedFlavor : null },
+        quantity
+      );
+      setQuantity(1);
+      setSelectedFlavor("");
+    }
+  };
+
 
   const handleProductClick = () => navigate(`/product/${product.id}`)
 
@@ -35,7 +48,7 @@ export default function ProductCard({ product }) {
         <h3 className="text-lg font-medium text-gray-900 mb-2 cursor-pointer hover:text-purple-600 transition-colors" onClick={handleProductClick}>
           {product.name}
         </h3>
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
+
 
         <div className="flex items-center justify-between mb-2">
           <span className="text-2xl font-bold text-purple-600">${product.price}</span>
@@ -69,11 +82,11 @@ export default function ProductCard({ product }) {
             </div>
             <button
               onClick={handleAddToCart}
-              disabled={product.flavor_enabled && product.flavors?.length > 0 && !selectedFlavor}
-              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors font-medium"
             >
               Agregar al Carrito
             </button>
+
           </div>
         ) : (
           <button disabled className="w-full bg-gray-400 text-white py-2 px-4 rounded-md cursor-not-allowed">Sin Stock</button>
