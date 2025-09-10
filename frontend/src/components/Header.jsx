@@ -85,10 +85,9 @@ export default function Header() {
 
   // Categorías para el dropdown (coinciden con las del backend)
   const productCategories = [
-    { name: "Vapes Desechables", route: "/categoria/pod-descartables-desechables", icon: "🎯" },
+    { name: "Vapes Desechables", route: "/categoria/vapes-desechables", icon: "🎯" },
     { name: "Líquidos", route: "/categoria/liquidos", icon: "💧" },
     { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
-    // Futuras categorías (cuando existan en el backend)
     { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
     { name: "Accesorios", route: "/categoria/accesorios", icon: "⚙️" },
     { name: "Celulares", route: "/categoria/celulares", icon: "📱" },

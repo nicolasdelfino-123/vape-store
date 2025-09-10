@@ -7,13 +7,12 @@ import SidebarFilters from "./SidebarFilters"
 
 // Mapeo simple de slug -> nombre de categoría (solo las que existen en el backend)
 const SLUG_TO_NAME = {
-  "pod-descartables-desechables": "Vapes Desechables",
-  "liquidos": "Líquidos",
-  "perfumes": "Perfumes",
-  // Estas categorías no existen aún en el backend, pero las dejo para futuro
+  "vapes-desechables": "Vapes Desechables",
   "pods-recargables": "Pods Recargables",
+  "liquidos": "Líquidos",
   "accesorios": "Accesorios",
   "celulares": "Celulares",
+  "perfumes": "Perfumes",
 }
 
 export default function ProductGrid({ category, hideFilters = false }) {
@@ -26,7 +25,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
 
   // Determinar categoría actual - SIMPLIFICADO
-  const currentSlug = slug || "pod-descartables-desechables"
+  const currentSlug = slug || "vapes-desechables"
   const currentCategoryName = SLUG_TO_NAME[currentSlug]
 
   // Cargar productos una sola vez

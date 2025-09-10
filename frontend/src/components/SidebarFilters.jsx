@@ -2,8 +2,8 @@ import { useState, useMemo } from "react"
 import { Menu } from "lucide-react"
 
 const CATEGORIES = [
-    { id: 2, name: "POD Descartables/Desechables", slug: "pod-descartables-desechables" },
-    { id: 1, name: "Pods Recargables", slug: "pods-recargables" },
+    { id: 1, name: "Vapes Desechables", slug: "vapes-desechables" },
+    { id: 2, name: "Pods Recargables", slug: "pods-recargables" },
     { id: 3, name: "Líquidos", slug: "liquidos" },
     { id: 4, name: "Accesorios", slug: "accesorios" },
     { id: 5, name: "Celulares", slug: "celulares" },

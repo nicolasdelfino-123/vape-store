@@ -88,12 +88,12 @@ const Layout = () => {
           <Route path="/admin/login" element={<LoginAdmin />} />
 
           {/* Rutas por categoría - ACTUALIZADAS Y COMPLETAS */}
-          <Route path="/categoria/pods-recargables" element={<ProductGrid category="Pods Recargables" />} />
-          <Route path="/categoria/pods-descartables" element={<ProductGrid category="Vapes Desechables" />} />
-          <Route path="/categoria/liquidos" element={<ProductGrid category="Líquidos" />} />
-          <Route path="/categoria/accesorios" element={<ProductGrid category="Accesorios" />} />
-          <Route path="/categoria/celulares" element={<ProductGrid category="Celulares" />} />
-          <Route path="/categoria/perfumes" element={<ProductGrid category="Perfumes" />} />
+          <Route path="/categoria/vapes-desechables" element={<ProductGrid />} />
+          <Route path="/categoria/pods-recargables" element={<ProductGrid />} />
+          <Route path="/categoria/liquidos" element={<ProductGrid />} />
+          <Route path="/categoria/accesorios" element={<ProductGrid />} />
+          <Route path="/categoria/celulares" element={<ProductGrid />} />
+          <Route path="/categoria/perfumes" element={<ProductGrid />} />
 
 
           {/* ===== Mi Cuenta con subrutas ===== */}
