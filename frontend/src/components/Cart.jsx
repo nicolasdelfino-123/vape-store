@@ -241,7 +241,14 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
           </div>
 
           <button
-            onClick={() => alert("Iniciar compra (integrar checkout)")}
+            onClick={() => {
+              if (isRouteMode) {
+                navigate('/checkout')
+              } else {
+                close()
+                navigate('/checkout')
+              }
+            }}
             className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
           >
             INICIAR COMPRA

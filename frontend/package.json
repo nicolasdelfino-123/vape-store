@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mercadopago/sdk-react": "^1.0.6",
     "events": "^3.3.0",
     "lucide-react": "^0.543.0",
     "react": "^19.1.0",

@@ -1,0 +1,165 @@
+# app/routes/mercadopago_bp.py
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+import mercadopago
+import os
+from datetime import datetime
+from ..models import Order, OrderItem, Product, User
+from ..database import db
+from ..config import Config
+
+mercadopago_bp = Blueprint('mercadopago', __name__)
+
+def get_mp_sdk():
+    """Obtener SDK de MercadoPago con manejo de errores"""
+    access_token = Config.MERCADOPAGO_ACCESS_TOKEN
+    if not access_token:
+        # Token de prueba por defecto para desarrollo
+        access_token = "TEST-2427986737689677-090610-a4b9a44d6c8f1c6d9f6e4e5c9b8a7d6e-123456789"
+    return mercadopago.SDK(access_token)
+
+@mercadopago_bp.route('/create-preference', methods=['POST'])
+@jwt_required()
+def create_preference():
+    """Crear preferencia de pago en MercadoPago"""
+    try:
+        print("=== INICIO CREATE PREFERENCE ===")
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        
+        print(f"User ID: {user_id}")
+        print(f"Request data: {data}")
+        
+        # Validar datos requeridos
+        if not data.get('items') or not data.get('payer'):
+            print("ERROR: Items y payer son requeridos")
+            return jsonify({'error': 'Items y payer son requeridos'}), 400
+        
+        print(f"Items: {data.get('items')}")
+        print(f"Payer: {data.get('payer')}")
+        
+        # Construir la preferencia
+        preference_data = {
+            "items": data['items'],
+            "payer": data['payer'],
+            "back_urls": data.get('back_urls', {}),
+            "auto_return": data.get('auto_return', 'approved'),
+            "payment_methods": data.get('payment_methods', {}),
+            "notification_url": data.get('notification_url'),
+            "statement_descriptor": data.get('statement_descriptor', 'ZARPADOS VAPS'),
+            "external_reference": data.get('external_reference'),
+            "expires": True,
+            "expiration_date_from": datetime.now().isoformat(),
+            "expiration_date_to": (datetime.now().replace(hour=23, minute=59, second=59)).isoformat()
+        }
+        
+        print(f"Preference data to send to MP: {preference_data}")
+        
+        # Crear la preferencia en MercadoPago
+        sdk = get_mp_sdk()
+        print("SDK inicializado")
+        
+        preference_response = sdk.preference().create(preference_data)
+        print(f"MP Response: {preference_response}")
+        
+        preference = preference_response["response"]
+        
+        if preference_response["status"] == 201:
+            print("SUCCESS: Preferencia creada exitosamente")
+            return jsonify({
+                'preference_id': preference['id'],
+                'init_point': preference['init_point'],
+                'sandbox_init_point': preference['sandbox_init_point']
+            }), 201
+        else:
+            print(f"ERROR MP: Status {preference_response['status']}")
+            return jsonify({'error': 'Error creando preferencia en MercadoPago', 'details': preference_response}), 400
+            
+    except Exception as e:
+        print(f"EXCEPCIÓN en create_preference: {str(e)}")
+        print(f"Tipo de error: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+
+@mercadopago_bp.route('/webhook', methods=['POST'])
+def webhook():
+    """Webhook para notificaciones de MercadoPago"""
+    try:
+        data = request.get_json()
+        
+        # Verificar que sea una notificación de pago
+        if data.get('type') == 'payment':
+            payment_id = data.get('data', {}).get('id')
+            
+            if payment_id:
+                # Obtener información del pago
+                sdk = get_mp_sdk()
+                payment_response = sdk.payment().get(payment_id)
+                payment = payment_response["response"]
+                
+                if payment_response["status"] == 200:
+                    # Procesar el pago según su estado
+                    status = payment.get('status')
+                    external_reference = payment.get('external_reference')
+                    
+                    if status == 'approved':
+                        # Pago aprobado - crear orden en la base de datos
+                        create_order_from_payment(payment)
+                    
+                    print(f"Payment {payment_id} status: {status}")
+                    
+        return jsonify({'status': 'ok'}), 200
+        
+    except Exception as e:
+        print(f"Webhook error: {str(e)}")
+        return jsonify({'error': 'Error procesando webhook'}), 500
+
+def create_order_from_payment(payment_data):
+    """Crear orden en la base de datos desde un pago aprobado"""
+    try:
+        external_reference = payment_data.get('external_reference', '')
+        payer_email = payment_data.get('payer', {}).get('email')
+        
+        # Buscar usuario por email
+        user = User.query.filter_by(email=payer_email).first()
+        
+        # Crear nueva orden
+        order = Order(
+            user_id=user.id if user else None,
+            total_amount=payment_data.get('transaction_amount', 0),
+            status='paid',
+            payment_method='mercadopago',
+            payment_id=str(payment_data.get('id')),
+            external_reference=external_reference,
+            customer_email=payer_email,
+            customer_name=f"{payment_data.get('payer', {}).get('first_name', '')} {payment_data.get('payer', {}).get('last_name', '')}".strip(),
+            shipping_address=payment_data.get('payer', {}).get('address', {}).get('street_name', ''),
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(order)
+        db.session.commit()
+        
+        print(f"Order created successfully: {order.id}")
+        
+    except Exception as e:
+        print(f"Error creating order: {str(e)}")
+        db.session.rollback()
+
+@mercadopago_bp.route('/payment/<payment_id>', methods=['GET'])
+@jwt_required()
+def get_payment(payment_id):
+    """Obtener información de un pago específico"""
+    try:
+        sdk = get_mp_sdk()
+        payment_response = sdk.payment().get(payment_id)
+        
+        if payment_response["status"] == 200:
+            return jsonify(payment_response["response"]), 200
+        else:
+            return jsonify({'error': 'Pago no encontrado'}), 404
+            
+    except Exception as e:
+        print(f"Error getting payment: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500

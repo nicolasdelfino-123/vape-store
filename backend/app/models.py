@@ -130,16 +130,20 @@ class CartItem(db.Model):
 
 class Order(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)  # Puede ser guest
     total_amount: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, confirmed, shipped, delivered, cancelled
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, paid, confirmed, shipped, delivered, cancelled
     shipping_address: Mapped[str] = mapped_column(String(200), nullable=False)
     payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
+    payment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # ID del pago en MercadoPago
+    external_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Referencia externa
+    customer_email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email del cliente
+    customer_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Nombre del cliente
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Relaciones
-    user: Mapped["User"] = relationship("User")
+    user: Mapped[Optional["User"]] = relationship("User")
     order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     
     def serialize(self):
@@ -150,6 +154,10 @@ class Order(db.Model):
             'status': self.status,
             'shipping_address': self.shipping_address,
             'payment_method': self.payment_method,
+            'payment_id': self.payment_id,
+            'external_reference': self.external_reference,
+            'customer_email': self.customer_email,
+            'customer_name': self.customer_name,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
             'order_items': [item.serialize() for item in self.order_items],

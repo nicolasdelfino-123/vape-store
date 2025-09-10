@@ -17,6 +17,10 @@ class Config:
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_USERNAME')
     MAIL_ASCII_ATTACHMENTS = False
     
+    # Configuración de MercadoPago
+    MERCADOPAGO_ACCESS_TOKEN = os.getenv('MERCADOPAGO_ACCESS_TOKEN')
+    MERCADOPAGO_PUBLIC_KEY = os.getenv('MERCADOPAGO_PUBLIC_KEY')
+    
     # Configuración base de PostgreSQL
     @staticmethod
     def get_database_uri():

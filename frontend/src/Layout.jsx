@@ -20,6 +20,10 @@ import ProductGrid from "./components/ProductGrid.jsx";
 import Header from "./components/Header.jsx";
 import Toast from "./components/Toast.jsx";
 import AdminProducts from "./views/AdminProducts.jsx";
+import Checkout from "./components/Checkout.jsx";
+import CheckoutSuccess from "./views/CheckoutSuccess.jsx";
+import CheckoutFailure from "./views/CheckoutFailure.jsx";
+import CheckoutPending from "./views/CheckoutPending.jsx";
 
 // Páginas de "Mi Cuenta"
 import AccountLayout from "./views/AccountLayout.jsx";
@@ -83,6 +87,10 @@ const Layout = () => {
           <Route path="/products" element={<ProductGrid />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/checkout/failure" element={<CheckoutFailure />} />
+          <Route path="/checkout/pending" element={<CheckoutPending />} />
           <Route path="/categoria/:slug" element={<ProductGrid />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
