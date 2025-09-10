@@ -9,18 +9,18 @@ const Checkout = () => {
     const navigate = useNavigate()
 
     // Inicializar MercadoPago con tu Public Key
+    // Inicializar MercadoPago con tu Public Key desde .env
     useEffect(() => {
-        console.log('Inicializando MercadoPago SDK...')
         try {
-            // Usa tu PUBLIC KEY de MercadoPago aquí
-            initMercadoPago('APP_USR-acc60b41-c0b2-4af3-af72-28a78f673102', {
-                locale: 'es-AR'
-            })
+            const pk = import.meta.env.VITE_MP_PUBLIC_KEY || 'APP_USR-acc60b41-c0b2-4af3-af72-28a78f673102'
+            console.log('Inicializando MercadoPago SDK...')
+            initMercadoPago(pk, { locale: 'es-AR' })
             console.log('MercadoPago SDK inicializado correctamente')
         } catch (error) {
             console.error('Error inicializando MercadoPago SDK:', error)
         }
     }, [])
+
 
     const [customerData, setCustomerData] = useState({
         email: store.user?.email || '',
@@ -61,13 +61,22 @@ const Checkout = () => {
             }
 
             // Preparar items con el formato correcto de MercadoPago
-            const items = store.cart.map(item => ({
-                id: String(item.id), // Convertir a string
-                title: item.name,
-                quantity: parseInt(item.quantity),
-                unit_price: parseFloat(item.price),
-                currency_id: 'ARS'
-            }))
+            // Preparar items con el formato correcto de MercadoPago
+            const items = store.cart.map((item) => {
+                const qty = Math.max(1, parseInt(item.quantity || 1, 10))
+                const price = Number(item.price)
+                if (!Number.isFinite(price) || price <= 0) {
+                    throw new Error(`Precio inválido para ${item.name}`)
+                }
+                return {
+                    id: String(item.id ?? item.sku ?? Math.random()),
+                    title: item.name,
+                    quantity: qty,
+                    unit_price: price,
+                    currency_id: 'ARS'
+                }
+            })
+
 
             console.log('Items preparados:', items)
 
@@ -109,12 +118,14 @@ const Checkout = () => {
 
             console.log('Preference data enviada:', preferenceData)
 
+            const token = localStorage.getItem('token')
+            const headers = token
+                ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                : { 'Content-Type': 'application/json' }
+
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/create-preference`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers,
                 body: JSON.stringify(preferenceData)
             })
 

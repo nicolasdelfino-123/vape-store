@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 
 load_dotenv()
+
 # Instancias que se inicializan más adelante
 db = SQLAlchemy()
 bcrypt = Bcrypt()
@@ -18,13 +19,13 @@ migrate = Migrate()
 mail = Mail()
 
 def create_app():
-    
     """
-    We define static_folder because Flask is going to serve the front end files(Only in PRODUCTION!) since we are running everything from a single Dockerfile in production
+    We define static_folder because Flask is going to serve the front end files (Only in PRODUCTION!)
+    since we are running everything from a single Dockerfile in production
     """
     app = Flask(__name__, static_folder="front/build", static_url_path="/")
 
-    # Configuración básica
+    # Configuración básica según entorno
     enviroment = os.getenv("FLASK_ENV", "production")
     if enviroment == "development":
         app.config.from_object(DevelopmentConfig)
@@ -32,7 +33,13 @@ def create_app():
         app.config.from_object(TestingConfig)
     else:
         app.config.from_object(ProductionConfig)
-        
+
+    # 🔑 Sobrescribir la DB con la URI del .env si existe
+    sqlalchemy_uri = os.getenv("SQLALCHEMY_DATABASE_URI")
+    if sqlalchemy_uri:
+        app.config["SQLALCHEMY_DATABASE_URI"] = sqlalchemy_uri
+    else:
+        print("⚠️  No se encontró SQLALCHEMY_DATABASE_URI en .env, usando configuración por defecto")
 
     # Extensiones
     CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -53,7 +60,7 @@ def create_app():
     from app.routes.public_bp import public_bp
     from app.routes.admin_bp import admin_bp
     from app.routes.mercadopago_bp import mercadopago_bp
-    
+
     app.register_blueprint(user_bp, url_prefix='/user')
     app.register_blueprint(public_bp, url_prefix='/public')
     app.register_blueprint(admin_bp, url_prefix='/admin')

@@ -1,6 +1,7 @@
 # backend/app/routes/mercadopago_bp.py
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, jwt_required
+
 import mercadopago
 import os
 from datetime import datetime
@@ -13,44 +14,52 @@ def get_mp_sdk():
     """Obtener SDK de MercadoPago correctamente"""
     access_token = os.getenv('MERCADOPAGO_ACCESS_TOKEN')
     if not access_token:
-        # Usar tu token de acceso real
-        access_token = "TEST-2427986737689677-090610-a4b9a44d6c8f1c6d9f6e4e5c9b8a7d6e-123456789"
-        print(f"USANDO TOKEN DE PRUEBA: {access_token}")
-    
-    # Usar la nueva forma de instanciar el SDK
-    sdk = mercadopago.SDK(access_token)
-    return sdk
+        raise RuntimeError("MERCADOPAGO_ACCESS_TOKEN no configurado en .env")
+    return mercadopago.SDK(access_token)
+
 
 @mercadopago_bp.route('/create-preference', methods=['POST'])
-@jwt_required()
 def create_preference():
-    """Crear preferencia de pago en MercadoPago"""
+    """Crear preferencia de pago en MercadoPago (JWT opcional)"""
     try:
         print("=== INICIO CREATE PREFERENCE ===")
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        
+
+        # JWT opcional: si hay token válido, tomamos el user_id; si no, seguimos como invitado
+        try:
+            verify_jwt_in_request(optional=True)
+            user_id = get_jwt_identity()
+        except Exception:
+            user_id = None
+
+        data = request.get_json() or {}
         print(f"User ID: {user_id}")
         print(f"Request data: {data}")
-        
+
         # Validar datos requeridos
         if not data.get('items') or not data.get('payer'):
             print("ERROR: Items y payer son requeridos")
             return jsonify({'error': 'Items y payer son requeridos'}), 400
-        
-        # Validar que los items tengan la estructura correcta
+
+        # Validar estructura mínima de items
         items = data['items']
         for item in items:
-            if not all(key in item for key in ['id', 'title', 'quantity', 'unit_price']):
+            if not all(k in item for k in ['id', 'title', 'quantity', 'unit_price']):
                 return jsonify({'error': 'Items con formato incorrecto'}), 400
-        
-        print(f"Items validados: {items}")
+
+        # Normalizar items (evita 422 por tipos o precios inválidos)
+        for it in items:
+            it['quantity'] = int(it.get('quantity', 1) or 1)
+            it['unit_price'] = float(it.get('unit_price', 0) or 0)
+            if it['unit_price'] <= 0:
+                return jsonify({'error': 'unit_price debe ser > 0'}), 400
+
+        print(f"Items validados/normalizados: {items}")
         print(f"Payer: {data.get('payer')}")
-        
-        # Crear la URL base para back_urls
-        frontend_url = "http://localhost:5174"
-        
-        # Construir la preferencia correctamente
+
+        # URL base para back_urls (no hardcodear localhost)
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5174')
+
+        # Construir preferencia
         preference_data = {
             "items": items,
             "payer": {
@@ -60,45 +69,44 @@ def create_preference():
             },
             "back_urls": {
                 "success": f"{frontend_url}/checkout/success",
-                "failure": f"{frontend_url}/checkout/failure", 
+                "failure": f"{frontend_url}/checkout/failure",
                 "pending": f"{frontend_url}/checkout/pending"
             },
             "auto_return": "approved"
         }
-        
+
         print(f"Preference data final: {preference_data}")
-        
-        # Crear la preferencia en MercadoPago
+
+        # Crear preferencia en MP
         sdk = get_mp_sdk()
         print("SDK inicializado correctamente")
-        
+
         preference_response = sdk.preference().create(preference_data)
         print(f"MP Response completa: {preference_response}")
-        
+
         if preference_response.get("status") == 201:
             preference = preference_response["response"]
             print("SUCCESS: Preferencia creada exitosamente")
-            
             return jsonify({
                 'preference_id': preference['id'],
                 'init_point': preference['init_point'],
                 'sandbox_init_point': preference.get('sandbox_init_point', preference['init_point'])
             }), 201
-        else:
-            print(f"ERROR MP: Status {preference_response.get('status')}")
-            print(f"Error details: {preference_response}")
-            return jsonify({
-                'error': 'Error creando preferencia en MercadoPago', 
-                'details': preference_response
-            }), 400
-            
+
+        print(f"ERROR MP: Status {preference_response.get('status')}")
+        print(f"Error details: {preference_response}")
+        return jsonify({
+            'error': 'Error creando preferencia en MercadoPago',
+            'details': preference_response
+        }), 400
+
     except Exception as e:
         print(f"EXCEPCIÓN en create_preference: {str(e)}")
         print(f"Tipo de error: {type(e)}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return jsonify({
-            'error': 'Error interno del servidor', 
+            'error': 'Error interno del servidor',
             'details': str(e)
         }), 500
 
