@@ -22,8 +22,8 @@ export default function Header() {
   const scrollTimeout = useRef(null);
 
   // ⚙️ Ajustes rápidos de tamaño (en px)
-  const LOGO_BASE_H = 300;
-  const LOGO_SCROLL_H = 340;
+  const LOGO_BASE_H = 220;    // Altura normal del logo
+  const LOGO_SCROLL_H = 195;  // Altura cuando se hace scroll (más pequeño)
   const LOGO_W = "auto";
   const USE_WHITE_KILLER = false;
 
@@ -83,14 +83,15 @@ export default function Header() {
 
   const cartItemsCount = (store.cart || []).reduce((t, i) => t + (i.quantity || 0), 0);
 
-  // Categorías para el dropdown
+  // Categorías para el dropdown (coinciden con las del backend)
   const productCategories = [
-    { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
-    { name: "Pods Descartables", route: "/categoria/pods-descartables", icon: "🎯" },
+    { name: "Vapes Desechables", route: "/categoria/pod-descartables-desechables", icon: "🎯" },
     { name: "Líquidos", route: "/categoria/liquidos", icon: "💧" },
+    { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
+    // Futuras categorías (cuando existan en el backend)
+    { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
     { name: "Accesorios", route: "/categoria/accesorios", icon: "⚙️" },
     { name: "Celulares", route: "/categoria/celulares", icon: "📱" },
-    { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
   ];
 
   return (
@@ -126,15 +127,19 @@ export default function Header() {
           <div className="flex-shrink-0 md:mr-auto">
             <Link to="/inicio" aria-label="Ir al inicio" className="block">
               <img
-                src="logo-22.png"
+                src="/logo-22.png"
                 alt="Zarpados Vapers"
                 className="block w-auto select-none transition-all duration-300"
                 style={{
-                  height: isScrolled ? LOGO_SCROLL_H : LOGO_BASE_H,
+                  height: isScrolled ? `${LOGO_SCROLL_H}px` : `${LOGO_BASE_H}px`,
                   width: LOGO_W,
                   objectFit: "contain",
                   imageRendering: "auto",
-                  mixBlendMode: USE_WHITE_KILLER ? "multiply" : "normal"
+                  maxWidth: "300px"
+                }}
+                onError={(e) => {
+                  console.log("Error cargando logo:", e);
+                  e.target.src = "/logo.png"; // fallback
                 }}
                 decoding="async"
                 loading="eager"

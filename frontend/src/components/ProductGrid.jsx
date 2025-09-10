@@ -16,7 +16,7 @@ const SLUG_TO_NAME = {
   "celulares": "Celulares",
 }
 
-export default function ProductGrid({ category }) {
+export default function ProductGrid({ category, hideFilters = false }) {
   const navigate = useNavigate()
   const { slug } = useParams()
   const { store, actions } = useContext(Context)
@@ -24,9 +24,9 @@ export default function ProductGrid({ category }) {
   // Estado simple
   const [searchTerm, setSearchTerm] = useState("")
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
-  const [currentSlug, setCurrentSlug] = useState(slug || "pod-descartables-desechables")
 
-  // Determinar categoría actual
+  // Determinar categoría actual - SIMPLIFICADO
+  const currentSlug = slug || "pod-descartables-desechables"
   const currentCategoryName = SLUG_TO_NAME[currentSlug]
 
   // Cargar productos una sola vez
@@ -36,21 +36,18 @@ export default function ProductGrid({ category }) {
     }
   }, [])
 
-  // Actualizar slug cuando cambia la URL
+  // Limpiar filtros cuando cambia el slug - SIMPLIFICADO
   useEffect(() => {
-    if (slug && slug !== currentSlug) {
-      setCurrentSlug(slug)
-    }
-  }, [slug])
+    setSearchTerm("")
+    setPriceRange({ min: 0, max: Infinity })
+    window.scrollTo(0, 0)
+  }, [currentSlug])
 
   // Productos de la categoría actual (sin filtros de precio)
   const categoryProducts = useMemo(() => {
     const products = store.products || []
-    console.log("Filtrar productos por categoría:", currentCategoryName)
-    console.log("Productos disponibles:", products.map(p => ({ name: p.name, category: p.category_name })))
-    const filtered = products.filter(p => p.category_name === currentCategoryName)
-    console.log("Productos filtrados:", filtered.length)
-    return filtered
+    if (!currentCategoryName) return []
+    return products.filter(p => p.category_name === currentCategoryName)
   }, [store.products, currentCategoryName])
 
   // Calcular min/max de precios SOLO de la categoría actual
@@ -105,37 +102,40 @@ export default function ProductGrid({ category }) {
         </p>
       </div>
 
-      <div className="md:flex md:items-start md:gap-6">
-        {/* Sidebar */}
-        <SidebarFilters
-          className="md:shrink-0 md:sticky md:top-4 md:self-start"
-          currentCategorySlug={currentSlug}
-          onSelectCategory={(newSlug) => {
-            setCurrentSlug(newSlug)
-            navigate(`/categoria/${newSlug}`)
-          }}
-          priceMin={categoryPriceRange.min}
-          priceMax={categoryPriceRange.max}
-          price={priceRange}
-          onChangePrice={(newRange) => {
-            setPriceRange({
-              min: Number(newRange.min) || 0,
-              max: Number(newRange.max) || Infinity
-            })
-          }}
-        />
+      <div className={hideFilters ? "w-full" : "md:flex md:items-start md:gap-6"}>
+        {/* Sidebar - Solo mostrar si hideFilters es false */}
+        {!hideFilters && (
+          <SidebarFilters
+            className="md:shrink-0 md:sticky md:top-4 md:self-start"
+            currentCategorySlug={currentSlug}
+            onSelectCategory={(newSlug) => {
+              navigate(`/categoria/${newSlug}`)
+            }}
+            priceMin={categoryPriceRange.min}
+            priceMax={categoryPriceRange.max}
+            price={priceRange}
+            onChangePrice={(newRange) => {
+              setPriceRange({
+                min: Number(newRange.min) || 0,
+                max: Number(newRange.max) || Infinity
+              })
+            }}
+          />
+        )}
 
         {/* Contenido */}
-        <div className="flex-1">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Buscar productos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
+        <div className={hideFilters ? "w-full" : "flex-1"}>
+          {!hideFilters && (
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Buscar productos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          )}
 
           {store.loading ? (
             <div className="text-center py-12">
