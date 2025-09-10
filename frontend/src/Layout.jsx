@@ -10,7 +10,7 @@ import SetupPassword from "./views/SetupPassword.jsx";
 import ResetPassword from "./views/ResetPassword.jsx";
 import Logout from "./views/Logout.jsx";
 import Inicio from "./views/Inicio.jsx";
-import AdminPanel from "./views/AdminPanel.jsx";
+
 import ProductDetail from "./views/ProductDetail.jsx";
 import Footer from "./components/Footer.jsx";
 
@@ -83,7 +83,7 @@ const Layout = () => {
           <Route path="/products" element={<ProductGrid />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/admin" element={<AdminPanel />} />
+
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
 

@@ -67,7 +67,7 @@ class Product(db.Model):
     # NUEVO: lista de sabores para pods desechables (opcional)
    
     flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
-    flavor_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
+    flavor_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=True, default=False)
     # Campos adicionales para vapes
     puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Para desechables
     nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Nicotina

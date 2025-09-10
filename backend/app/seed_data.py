@@ -11,15 +11,15 @@ def seed_database():
     
     # Crear categorías (idempotente)
     categories = [
-    Category(name="Vapes Desechables", description="Vapes de un solo uso"),
-    Category(name="Pods Recargables", description="Sistemas de pods recargables"),
-    Category(name="Líquidos", description="E-liquids y sales de nicotina"),
-    Category(name="Accesorios", description="Repuestos y accesorios"),
-    Category(name="Mods", description="Mods y dispositivos avanzados"),
-    Category(name="Atomizadores", description="Tanks y RDA"),
-    Category(name="Sales de Nicotina", description="Sales de nicotina"),
-    Category(name="Celulares", description="Smartphones y accesorios"),
-    Category(name="Perfumes", description="Fragancias")
+        Category(name="Vapes Desechables", description="Vapes de un solo uso"),
+        Category(name="Pods Recargables", description="Sistemas de pods recargables"),
+        Category(name="Líquidos", description="E-liquids y sales de nicotina"),
+        Category(name="Accesorios", description="Repuestos y accesorios"),
+        Category(name="Mods", description="Mods y dispositivos avanzados"),
+        Category(name="Atomizadores", description="Tanks y RDA"),
+        Category(name="Sales de Nicotina", description="Sales de nicotina"),
+        Category(name="Celulares", description="Smartphones y accesorios"),
+        Category(name="Perfumes", description="Fragancias")
 ]
     
     for c in categories:
