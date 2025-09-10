@@ -8,10 +8,11 @@ const Checkout = () => {
     const { store, actions } = useContext(Context)
     const navigate = useNavigate()
 
-    // Inicializar MercadoPago dentro del componente
+    // Inicializar MercadoPago con tu Public Key
     useEffect(() => {
         console.log('Inicializando MercadoPago SDK...')
         try {
+            // Usa tu PUBLIC KEY de MercadoPago aquí
             initMercadoPago('APP_USR-acc60b41-c0b2-4af3-af72-28a78f673102', {
                 locale: 'es-AR'
             })
@@ -23,8 +24,8 @@ const Checkout = () => {
 
     const [customerData, setCustomerData] = useState({
         email: store.user?.email || '',
-        firstName: store.user?.first_name || '',
-        lastName: store.user?.last_name || '',
+        firstName: store.user?.name?.split(' ')[0] || '',
+        lastName: store.user?.name?.split(' ').slice(1).join(' ') || '',
         phone: '',
         address: '',
         city: '',
@@ -33,7 +34,6 @@ const Checkout = () => {
 
     const [preferenceId, setPreferenceId] = useState(null)
     const [loading, setLoading] = useState(false)
-    const [mercadoPagoUrl, setMercadoPagoUrl] = useState(null)
     const [paymentMethod, setPaymentMethod] = useState('')
 
     // Calcular totales
@@ -52,18 +52,30 @@ const Checkout = () => {
     const createPreference = async () => {
         setLoading(true)
         try {
+            console.log('=== CREANDO PREFERENCIA ===')
             console.log('Store cart:', store.cart)
             console.log('Customer data:', customerData)
 
+            if (!store.cart || store.cart.length === 0) {
+                throw new Error('El carrito está vacío')
+            }
+
+            // Preparar items con el formato correcto de MercadoPago
             const items = store.cart.map(item => ({
-                id: item.id.toString(),
+                id: String(item.id), // Convertir a string
                 title: item.name,
-                quantity: item.quantity,
+                quantity: parseInt(item.quantity),
                 unit_price: parseFloat(item.price),
                 currency_id: 'ARS'
             }))
 
-            console.log('Items to send:', items)
+            console.log('Items preparados:', items)
+
+            // Validar que todos los campos requeridos estén completos
+            if (!customerData.firstName || !customerData.lastName || !customerData.email ||
+                !customerData.phone || !customerData.address || !customerData.city || !customerData.zipCode) {
+                throw new Error('Por favor completa todos los campos requeridos')
+            }
 
             const preferenceData = {
                 items,
@@ -73,10 +85,10 @@ const Checkout = () => {
                     email: customerData.email,
                     phone: {
                         area_code: '11',
-                        number: customerData.phone
+                        number: customerData.phone.replace(/[^0-9]/g, '') // Solo números
                     },
                     address: {
-                        street_name: customerData.address,
+                        street_name: `${customerData.address}, ${customerData.city}`,
                         zip_code: customerData.zipCode
                     }
                 },
@@ -91,13 +103,11 @@ const Checkout = () => {
                     excluded_payment_types: [],
                     installments: 12
                 },
-                notification_url: `${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/webhook`,
                 statement_descriptor: 'ZARPADOS VAPS',
                 external_reference: `order_${Date.now()}_${store.user?.id || 'guest'}`
             }
 
-            console.log('Preference data to send:', preferenceData)
-            console.log('Backend URL:', import.meta.env.VITE_BACKEND_URL)
+            console.log('Preference data enviada:', preferenceData)
 
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/create-preference`, {
                 method: 'POST',
@@ -109,27 +119,34 @@ const Checkout = () => {
             })
 
             console.log('Response status:', response.status)
-            console.log('Response headers:', response.headers)
 
             if (!response.ok) {
                 const errorText = await response.text()
                 console.error('Response error:', errorText)
-                throw new Error(`Error creating preference: ${response.status} - ${errorText}`)
+
+                let errorData
+                try {
+                    errorData = JSON.parse(errorText)
+                } catch {
+                    errorData = { error: errorText }
+                }
+
+                throw new Error(errorData.error || `Error HTTP ${response.status}`)
             }
 
             const data = await response.json()
-            console.log('Response data:', data)
-            setPreferenceId(data.preference_id)
+            console.log('Response data exitosa:', data)
 
-            // Guardamos la URL de MercadoPago como respaldo
-            if (data.init_point) {
-                setMercadoPagoUrl(data.init_point)
+            if (data.preference_id) {
+                setPreferenceId(data.preference_id)
+                console.log('Preference ID configurado:', data.preference_id)
+            } else {
+                throw new Error('No se recibió preference_id en la respuesta')
             }
 
         } catch (error) {
             console.error('Error creating preference:', error)
-            // Mostrar error en consola y alerta temporal
-            alert('Error al crear la preferencia de pago. Revisa la consola para más detalles.')
+            alert(`Error al crear la preferencia de pago: ${error.message}`)
         } finally {
             setLoading(false)
         }
@@ -383,22 +400,6 @@ const Checkout = () => {
                                         onReady={() => console.log('Wallet ready')}
                                         onError={(error) => console.error('Wallet error:', error)}
                                     />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-xs text-gray-500 mb-3">
-                                        Serás redirigido a MercadoPago para completar el pago
-                                    </p>
-                                    {mercadoPagoUrl && (
-                                        <div className="mt-3">
-                                            <p className="text-xs text-gray-400 mb-2">¿No ves el botón de pago?</p>
-                                            <button
-                                                onClick={() => window.open(mercadoPagoUrl, '_blank')}
-                                                className="text-blue-600 hover:text-blue-800 text-sm underline"
-                                            >
-                                                Abrir MercadoPago en nueva ventana
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
