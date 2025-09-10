@@ -24,9 +24,10 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
 
-  // Determinar categoría actual - SIMPLIFICADO
-  const currentSlug = slug || "vapes-desechables"
-  const currentCategoryName = SLUG_TO_NAME[currentSlug]
+
+  // Determinar categoría actual - CORREGIDO
+  const currentSlug = slug // Sin valor por defecto
+  const currentCategoryName = category || (currentSlug ? SLUG_TO_NAME[currentSlug] : null)
 
   // Cargar productos una sola vez
   useEffect(() => {
@@ -35,19 +36,28 @@ export default function ProductGrid({ category, hideFilters = false }) {
     }
   }, [])
 
-  // Limpiar filtros cuando cambia el slug - SIMPLIFICADO
+  // Limpiar filtros cuando cambia el slug - CORREGIDO
   useEffect(() => {
     setSearchTerm("")
     setPriceRange({ min: 0, max: Infinity })
     window.scrollTo(0, 0)
-  }, [currentSlug])
+  }, [slug, category])
 
   // Productos de la categoría actual (sin filtros de precio)
   const categoryProducts = useMemo(() => {
     const products = store.products || []
-    if (!currentCategoryName) return []
+
+    // Si estamos en el homepage (sin categoría), mostrar solo 12 productos
+    if (hideFilters && !currentCategoryName) {
+      return products.slice(0, 12)
+    }
+
+    // Si no hay categoría seleccionada, mostrar todos
+    if (!currentCategoryName) return products
+
+    // Filtrar por categoría
     return products.filter(p => p.category_name === currentCategoryName)
-  }, [store.products, currentCategoryName])
+  }, [store.products, currentCategoryName, slug, category, hideFilters])
 
   // Calcular min/max de precios SOLO de la categoría actual
   const categoryPriceRange = useMemo(() => {
@@ -89,7 +99,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
     })
   }, [categoryProducts, searchTerm, priceRange])
 
-  const pageTitle = category || currentCategoryName || "Productos"
+  const pageTitle = category || currentCategoryName || "Todos los Productos"
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -97,7 +107,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{pageTitle}</h1>
         <p className="text-gray-600">
-          {filteredProducts.length} productos en {pageTitle}
+          {filteredProducts.length} productos{currentCategoryName ? ` en ${pageTitle}` : ""}
         </p>
       </div>
 
