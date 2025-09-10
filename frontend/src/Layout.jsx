@@ -83,7 +83,7 @@ const Layout = () => {
           <Route path="/products" element={<ProductGrid />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
-
+          <Route path="/categoria/:slug" element={<ProductGrid />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
 

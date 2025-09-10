@@ -1,51 +1,133 @@
-import { useState, useEffect, useContext } from "react"
+// src/components/ProductGrid.jsx
+import { useState, useEffect, useContext, useMemo } from "react"
+import { useParams, useNavigate } from "react-router-dom"
 import { Context } from "../js/store/appContext"
 import ProductCard from "./ProductCard.jsx"
+import SidebarFilters from "./SidebarFilters"
+
+// Mapeo simple de slug -> nombre de categoría (solo las que existen en el backend)
+const SLUG_TO_NAME = {
+  "pod-descartables-desechables": "Vapes Desechables",
+  "liquidos": "Líquidos",
+  "perfumes": "Perfumes",
+  // Estas categorías no existen aún en el backend, pero las dejo para futuro
+  "pods-recargables": "Pods Recargables",
+  "accesorios": "Accesorios",
+  "celulares": "Celulares",
+}
 
 export default function ProductGrid({ category }) {
+  const navigate = useNavigate()
+  const { slug } = useParams()
   const { store, actions } = useContext(Context)
-  const [selectedCategory, setSelectedCategory] = useState(category || "Todos")
-  const [searchTerm, setSearchTerm] = useState("")
 
+  // Estado simple
+  const [searchTerm, setSearchTerm] = useState("")
+  const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
+  const [currentSlug, setCurrentSlug] = useState(slug || "pod-descartables-desechables")
+
+  // Determinar categoría actual
+  const currentCategoryName = SLUG_TO_NAME[currentSlug]
+
+  // Cargar productos una sola vez
   useEffect(() => {
-    // Cargar productos desde la API solo una vez al montar el componente
-    if (actions && actions.fetchProducts) {
+    if (actions?.fetchProducts) {
       actions.fetchProducts()
     }
-  }, []) // Sin dependencias para que solo se ejecute una vez
+  }, [])
 
-  // Actualizar categoría seleccionada si viene por props
+  // Actualizar slug cuando cambia la URL
   useEffect(() => {
-    if (category) {
-      setSelectedCategory(category)
+    if (slug && slug !== currentSlug) {
+      setCurrentSlug(slug)
     }
-  }, [category])
+  }, [slug])
 
-  const filteredProducts = (store.products || []).filter((product) => {
-    const matchesCategory = selectedCategory === "Todos" || product.category_name === selectedCategory
-    const matchesSearch =
-      (product.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  // Productos de la categoría actual (sin filtros de precio)
+  const categoryProducts = useMemo(() => {
+    const products = store.products || []
+    console.log("Filtrar productos por categoría:", currentCategoryName)
+    console.log("Productos disponibles:", products.map(p => ({ name: p.name, category: p.category_name })))
+    const filtered = products.filter(p => p.category_name === currentCategoryName)
+    console.log("Productos filtrados:", filtered.length)
+    return filtered
+  }, [store.products, currentCategoryName])
 
-  const categories = ["Todos", ...(store.categories || [])]
+  // Calcular min/max de precios SOLO de la categoría actual
+  const categoryPriceRange = useMemo(() => {
+    if (categoryProducts.length === 0) return { min: 0, max: 50000 }
+
+    const prices = categoryProducts
+      .map(p => Number(p.price) || 0)
+      .filter(price => price > 0)
+
+    if (prices.length === 0) return { min: 0, max: 50000 }
+
+    return {
+      min: 0, // Siempre empezar en 0
+      max: Math.max(...prices)
+    }
+  }, [categoryProducts])
+
+  // RESETEAR rango de precios cuando cambia la categoría
+  useEffect(() => {
+    setPriceRange({ min: 0, max: Infinity })
+  }, [currentSlug])
+
+  // Productos filtrados (solo búsqueda y precio, la categoría ya está filtrada)
+  const filteredProducts = useMemo(() => {
+    const q = searchTerm.toLowerCase()
+
+    return categoryProducts.filter(product => {
+      // Filtro de búsqueda
+      const matchesSearch = !q ||
+        product.name?.toLowerCase().includes(q) ||
+        product.brand?.toLowerCase().includes(q)
+
+      // Filtro de precio
+      const price = Number(product.price) || 0
+      const matchesPrice = price >= priceRange.min &&
+        (priceRange.max === Infinity || price <= priceRange.max)
+
+      return matchesSearch && matchesPrice
+    })
+  }, [categoryProducts, searchTerm, priceRange])
+
+  const pageTitle = category || currentCategoryName || "Productos"
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header con título de categoría si viene por props */}
-      {category && (
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{category}</h1>
-          <p className="text-gray-600">Productos en la categoría {category}</p>
-        </div>
-      )}
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{pageTitle}</h1>
+        <p className="text-gray-600">
+          {filteredProducts.length} productos en {pageTitle}
+        </p>
+      </div>
 
-      {/* Filters */}
-      <div className="mb-8 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
+      <div className="md:flex md:items-start md:gap-6">
+        {/* Sidebar */}
+        <SidebarFilters
+          className="md:shrink-0 md:sticky md:top-4 md:self-start"
+          currentCategorySlug={currentSlug}
+          onSelectCategory={(newSlug) => {
+            setCurrentSlug(newSlug)
+            navigate(`/categoria/${newSlug}`)
+          }}
+          priceMin={categoryPriceRange.min}
+          priceMax={categoryPriceRange.max}
+          price={priceRange}
+          onChangePrice={(newRange) => {
+            setPriceRange({
+              min: Number(newRange.min) || 0,
+              max: Number(newRange.max) || Infinity
+            })
+          }}
+        />
+
+        {/* Contenido */}
+        <div className="flex-1">
+          <div className="mb-4">
             <input
               type="text"
               placeholder="Buscar productos..."
@@ -55,42 +137,28 @@ export default function ProductGrid({ category }) {
             />
           </div>
 
-          {/* Category Filter - solo mostrar si no viene categoría fija */}
-          {!category && (
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
+          {store.loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              <p className="mt-2 text-gray-600">Cargando productos...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
-            </select>
+            </div>
+          )}
+
+          {filteredProducts.length === 0 && !store.loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-600">
+                No se encontraron productos que coincidan con tu búsqueda.
+              </p>
+            </div>
           )}
         </div>
       </div>
-
-      {/* Products Grid */}
-      {store.loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-          <p className="mt-2 text-gray-600">Cargando productos...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
-
-      {filteredProducts.length === 0 && !store.loading && (
-        <div className="text-center py-12">
-          <p className="text-gray-600">No se encontraron productos que coincidan con tu búsqueda.</p>
-        </div>
-      )}
     </div>
   )
 }
