@@ -65,19 +65,8 @@ def create_preference():
         preference_data = {
             "items": items,
             "payer": {
-                "email": data['payer']['email'],
-                "name": data['payer'].get('name', ''),
-                "surname": data['payer'].get('surname', ''),
-            },
-            "back_urls": {
-                "success": f"{frontend_url}/checkout/success",
-                "failure": f"{frontend_url}/checkout/failure",
-                "pending": f"{frontend_url}/checkout/pending"
-            },
-            "auto_return": "approved",
-            "external_reference": data.get("external_reference") or f"cart-{(user_id or 'guest')}-{int(datetime.utcnow().timestamp())}",
-            # Opcional: notificaciones en dev
-            # "notification_url": f"{os.getenv('BACKEND_URL', 'http://localhost:5000')}/api/mercadopago/webhook",
+                "email": data['payer']['email']
+            }
         }
 
         print(f"Preference data final: {preference_data}")
@@ -99,9 +88,15 @@ def create_preference():
 
         # Si no es 201, devolvemos el error crudo para que lo veas en el alert
         status = preference_response.get('status', 400)
+        error_details = preference_response.get('response', {})
+        print(f"ERROR MP: Status {status}")
+        print(f"Error response completo: {preference_response}")
+        print(f"Error details: {error_details}")
+        
         return jsonify({
-            'error': 'Error creando preferencia en MercadoPago',
-            'details': preference_response
+            'error': f'Error creando preferencia en MercadoPago (Status: {status})',
+            'details': error_details,
+            'mp_response': preference_response
         }), status
 
     except RuntimeError as e:
