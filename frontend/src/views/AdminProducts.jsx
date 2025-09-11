@@ -202,27 +202,37 @@ export default function AdminProducts() {
                         try {
                             const text = await file.text()
                             const raw = JSON.parse(text) // array del scraper
-                            const transformed = (raw || []).map(it => {
-                                const catId = it.category_id || mapCategoryId(it.category_name)
-                                const catalog = (it.flavors || []).map(f => ({ name: String(f), active: false })) // default inactivo
-                                return {
-                                    id: undefined,
-                                    name: it.name || "",
-                                    description: it.description || "",
-                                    short_description: "", // no lo usamos
-                                    brand: it.brand || "",
-                                    price: it.price || 0,
-                                    stock: it.stock || 0,
-                                    image_url: it.image_url || "",
-                                    category_id: catId,
-                                    category_name: ID_TO_CATEGORY_NAME[catId] || "Vapes Desechables",
-                                    flavor_enabled: catalog.length > 0,
-                                    flavor_catalog: catalog,
-                                    flavors: catalog.filter(x => x.active).map(x => x.name),
-                                    is_active: true,
-                                    source_url: it.source_url || "",
-                                }
-                            })
+
+                            // === 👇 Normalización de nombres para evitar duplicados "similares" ===
+                            const cleanName = n => n.replace(/\s+/g, " ").trim().toLowerCase()
+                            const existingNames = new Set(products.map(p => cleanName(p.name)))
+
+                            const transformed = (raw || [])
+                                .filter(it => !existingNames.has(cleanName(it.name || "")))
+                                .map(it => {
+                                    const catId = it.category_id || mapCategoryId(it.category_name)
+                                    const catalog = (it.flavors || []).map(f => ({ name: String(f), active: true })) // los traemos activos
+                                    return {
+                                        id: undefined,
+                                        name: it.name || "",
+                                        description: it.description || "",              // ✅ traer descripción real
+                                        short_description: it.short_description || "",  // ✅ traer short description real
+                                        brand: it.brand || "",
+                                        price: it.price || 0,
+                                        stock: it.stock || 0,
+                                        image_url: it.image_url || "",
+                                        category_id: catId,
+                                        category_name: ID_TO_CATEGORY_NAME[catId] || "Vapes Desechables",
+                                        flavor_enabled: catalog.length > 0,
+                                        flavor_catalog: catalog,                        // ✅ catálogo completo para edición
+                                        flavors: catalog.map(x => x.name),              // ✅ todos los sabores como activos por defecto
+                                        is_active: true,
+                                        source_url: it.source_url || "",
+                                    }
+                                })
+
+                            // === 👆 Fin de normalización ===
+
                             setImportPreview(transformed)
                             setImportOpen(true)
                         } catch (err) {
@@ -232,6 +242,8 @@ export default function AdminProducts() {
                             e.target.value = ""
                         }
                     }}
+
+
                 />
             </div>
 
@@ -289,7 +301,11 @@ export default function AdminProducts() {
                                 </td>
                                 <td className="p-2 text-right">
                                     <button
-                                        onClick={() => setForm(p)}
+                                        onClick={() => setForm({
+                                            ...p,
+                                            flavor_catalog: p.flavor_catalog || (p.flavors || []).map(n => ({ name: n, active: true }))
+                                        })}
+
                                         className="px-3 py-1 border rounded hover:bg-gray-50"
                                     >
                                         Editar
@@ -498,7 +514,13 @@ export default function AdminProducts() {
                                         setImporting(true)
                                         for (const p of importPreview) {
                                             const active = (p.flavor_catalog || []).filter(x => x.active).map(x => x.name)
-                                            const body = { ...p, flavors: active, flavor_enabled: active.length > 0 }
+                                            const body = {
+                                                ...p,
+                                                flavors: active,                       // solo los activos se publican
+                                                flavor_enabled: p.flavor_catalog.length > 0,
+                                                flavor_catalog: p.flavor_catalog       // guardamos el catálogo completo para edición
+                                            }
+
                                             // tu API usa category_id; no necesita category_name
                                             delete body.category_name
                                             const res = await fetch(`${API}/admin/products`, {

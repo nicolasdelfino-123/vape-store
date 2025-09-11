@@ -2,12 +2,40 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Context } from '../js/store/appContext.jsx';
 
+
+
+// --- helpers de sabores ---
+const normalizeFlavor = s =>
+    s.replace(/\s+/g, ' ').trim().replace(/^[-•·]+/, '').trim();
+
+const extractFlavorsFromDescription = (txt = '') => {
+    // Busca "Sabor:" y toma sólo lo que viene después
+    const m = txt.match(/sabor\s*:\s*(.+)$/i);
+    if (!m) return [];
+    // separa por coma | barra | salto
+    const parts = m[1].split(/,|\||\/|\n/);
+    const flavors = parts
+        .map(normalizeFlavor)
+        .filter(Boolean)
+        .filter(f => !/^peso\b|^dimensiones\b/i.test(f)); // descarta ruido
+    // dedup
+    return [...new Set(flavors)];
+};
+
+const getFlavors = (product) => {
+    if (Array.isArray(product?.flavors) && product.flavors.length) return product.flavors;
+    return extractFlavorsFromDescription(product?.description || '');
+};
+
+
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { store, actions } = useContext(Context);
     const [quantity, setQuantity] = useState(1);
     const [selectedFlavor, setSelectedFlavor] = useState("");
+    const [activeTab, setActiveTab] = useState('desc'); // 'desc' | 'info'
+
 
 
     // Cargar productos si no están disponibles
@@ -83,7 +111,7 @@ const ProductDetail = () => {
                                 <p className="text-lg text-purple-600 mb-4">Marca: {product.brand}</p>
                             )}
 
-                            <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.description}</p>
+                            {/* <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.short_description}</p> */}
 
                             <div className="mb-6">
                                 <span className="text-4xl font-bold text-purple-600">${product.price?.toLocaleString('es-AR')}</span>
@@ -135,14 +163,57 @@ const ProductDetail = () => {
                             </div>
 
                             {/* Información adicional */}
-                            <div className="border-t pt-6">
-                                <h3 className="font-semibold text-gray-900 mb-3">Información del producto:</h3>
-                                <ul className="space-y-2 text-sm text-gray-600">
-                                    <li>• Envío gratis en compras superiores a $15.000</li>
-                                    <li>• Garantía de calidad</li>
-                                    <li>• Pago seguro con MercadoPago</li>
-                                </ul>
+                            {/* Pestañas: Descripción / Información adicional */}
+                            <div className="mt-4">
+                                <div className="flex gap-4 border-b">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('desc')}
+                                        className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'desc'
+                                            ? 'border-purple-600 text-purple-700 font-semibold'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            }`}
+                                    >
+                                        Descripción
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('info')}
+                                        className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'info'
+                                            ? 'border-purple-600 text-purple-700 font-semibold'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            }`}
+                                    >
+                                        Información adicional
+                                    </button>
+                                </div>
+
+                                {/* Contenido de pestañas */}
+                                {activeTab === 'desc' ? (
+                                    <div className="pt-4">
+                                        <p className="text-gray-700 whitespace-pre-line">
+                                            {product.short_description || 'Sin descripción breve.'}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="pt-4 space-y-3">
+                                        {/* Sabores */}
+                                        {getFlavors(product).length > 0 ? (
+                                            <div>
+                                                <h4 className="font-medium mb-2">Sabores disponibles</h4>
+                                                <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                                                    {getFlavors(product).map((f) => (
+                                                        <li key={f}>{f}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500">Sin sabores especificados.</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+
                         </div>
                     </div>
                 </div>
