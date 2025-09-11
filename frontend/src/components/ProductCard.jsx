@@ -95,7 +95,7 @@ export default function ProductCard({ product }) {
         {/* 5) Cantidad + botón */}
         {hasStock ? (
           <div className="space-y-2 sm:space-y-3">
-            <div className="flex items-center">
+            <div className="flex items-center flex justify-center md:justify-start">
               <label className="text-[11px] sm:text-xs md:text-sm font-medium">
                 Cantidad:
               </label>
