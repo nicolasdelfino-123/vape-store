@@ -2,14 +2,12 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Context } from '../js/store/appContext.jsx';
 
-
-
 // --- helpers de sabores ---
-const normalizeFlavor = s =>
+const normalizeFlavor = (s) =>
     s.replace(/\s+/g, ' ').trim().replace(/^[-•·]+/, '').trim();
 
 const extractFlavorsFromDescription = (txt = '') => {
-    // Busca "Sabor:" y toma sólo lo que viene después
+    // Busca "Sabor:" y toma sólo lo que viene después (hasta el fin)
     const m = txt.match(/sabor\s*:\s*(.+)$/i);
     if (!m) return [];
     // separa por coma | barra | salto
@@ -17,26 +15,26 @@ const extractFlavorsFromDescription = (txt = '') => {
     const flavors = parts
         .map(normalizeFlavor)
         .filter(Boolean)
-        .filter(f => !/^peso\b|^dimensiones\b/i.test(f)); // descarta ruido
+        .filter((f) => !/^peso\b|^dimensiones\b/i.test(f)); // descarta ruido
     // dedup
     return [...new Set(flavors)];
 };
 
 const getFlavors = (product) => {
+    if (!product) return [];
     if (Array.isArray(product?.flavors) && product.flavors.length) return product.flavors;
     return extractFlavorsFromDescription(product?.description || '');
 };
-
 
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { store, actions } = useContext(Context);
+
     const [quantity, setQuantity] = useState(1);
-    const [selectedFlavor, setSelectedFlavor] = useState("");
+    const [selectedFlavor, setSelectedFlavor] = useState('');
     const [activeTab, setActiveTab] = useState('desc'); // 'desc' | 'info'
-
-
+    const [flavorError, setFlavorError] = useState('');
 
     // Cargar productos si no están disponibles
     useEffect(() => {
@@ -47,12 +45,21 @@ const ProductDetail = () => {
         }
     }, []); // Solo ejecutar una vez al montar el componente
 
-    // Buscar el producto en el store
-    const product = store.products?.find(p => p.id === parseInt(id));
+    // Buscar el producto en el store (debe estar antes de usarlo)
+    const product = store.products?.find((p) => p.id === parseInt(id));
+
+    // Calcular opciones de sabor de forma segura
+    const flavorOptions = getFlavors(product);
 
     const handleAddToCart = () => {
+        // si hay sabores posibles, exigir uno seleccionado
+        if (flavorOptions.length > 0 && !selectedFlavor) {
+            setFlavorError('Elegí un sabor antes de agregar al carrito');
+            return;
+        }
         if (actions && actions.addToCart && product) {
-            actions.addToCart(product, quantity);
+            const productWithFlavor = selectedFlavor ? { ...product, selectedFlavor } : product;
+            actions.addToCart(productWithFlavor, quantity);
         }
     };
 
@@ -79,7 +86,6 @@ const ProductDetail = () => {
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-
                 {/* Botón volver */}
                 <button
                     onClick={handleBackToProducts}
@@ -93,7 +99,6 @@ const ProductDetail = () => {
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="grid md:grid-cols-2 gap-8 p-8">
-
                         {/* Imagen del producto */}
                         <div>
                             <img
@@ -111,27 +116,40 @@ const ProductDetail = () => {
                                 <p className="text-lg text-purple-600 mb-4">Marca: {product.brand}</p>
                             )}
 
-                            {/* <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.short_description}</p> */}
-
                             <div className="mb-6">
-                                <span className="text-4xl font-bold text-purple-600">${product.price?.toLocaleString('es-AR')}</span>
+                                <span className="text-4xl font-bold text-purple-600">
+                                    ${product.price?.toLocaleString('es-AR')}
+                                </span>
                             </div>
 
                             <div className="mb-6">
-                                <p className="text-sm text-gray-500 mb-2">Stock disponible: {product.stock} unidades</p>
+                                <p className="text-sm text-gray-500 mb-2">
+                                    Stock disponible: {product.stock} unidades
+                                </p>
                                 <p className="text-sm text-gray-500">Categoría: {product.category_name}</p>
                             </div>
-                            {Array.isArray(product.flavors) && product.flavors.length > 0 && (
+
+                            {/* Sabor (solo si hay sabores detectados) */}
+                            {flavorOptions.length > 0 && (
                                 <div className="mb-4">
                                     <label className="mb-1 block text-sm font-medium">Sabor</label>
                                     <select
-                                        className="w-full rounded border px-3 py-2"
+                                        className={`w-full rounded border px-3 py-2 ${flavorError ? 'border-red-500 ring-1 ring-red-300' : 'border-gray-300'
+                                            }`}
                                         value={selectedFlavor}
-                                        onChange={(e) => setSelectedFlavor(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedFlavor(e.target.value);
+                                            if (flavorError) setFlavorError('');
+                                        }}
                                     >
                                         <option value="">Seleccionar sabor…</option>
-                                        {product.flavors.map(f => <option key={f} value={f}>{f}</option>)}
+                                        {flavorOptions.map((f) => (
+                                            <option key={f} value={f}>
+                                                {f}
+                                            </option>
+                                        ))}
                                     </select>
+                                    {flavorError && <p className="mt-1 text-xs text-red-600">{flavorError}</p>}
                                 </div>
                             )}
 
@@ -155,14 +173,15 @@ const ProductDetail = () => {
 
                                 <button
                                     onClick={handleAddToCart}
-                                    disabled={product.stock === 0}
+                                    disabled={
+                                        product.stock === 0 || (flavorOptions.length > 0 && !selectedFlavor)
+                                    }
                                     className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {product.stock === 0 ? 'Sin stock' : 'Agregar al carrito'}
                                 </button>
                             </div>
 
-                            {/* Información adicional */}
                             {/* Pestañas: Descripción / Información adicional */}
                             <div className="mt-4">
                                 <div className="flex gap-4 border-b">
@@ -170,8 +189,8 @@ const ProductDetail = () => {
                                         type="button"
                                         onClick={() => setActiveTab('desc')}
                                         className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'desc'
-                                            ? 'border-purple-600 text-purple-700 font-semibold'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                ? 'border-purple-600 text-purple-700 font-semibold'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Descripción
@@ -180,8 +199,8 @@ const ProductDetail = () => {
                                         type="button"
                                         onClick={() => setActiveTab('info')}
                                         className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'info'
-                                            ? 'border-purple-600 text-purple-700 font-semibold'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                ? 'border-purple-600 text-purple-700 font-semibold'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Información adicional
@@ -197,7 +216,7 @@ const ProductDetail = () => {
                                     </div>
                                 ) : (
                                     <div className="pt-4 space-y-3">
-                                        {/* Sabores */}
+                                        {/* Sabores listados en la pestaña de info */}
                                         {getFlavors(product).length > 0 ? (
                                             <div>
                                                 <h4 className="font-medium mb-2">Sabores disponibles</h4>
@@ -213,7 +232,6 @@ const ProductDetail = () => {
                                     </div>
                                 )}
                             </div>
-
                         </div>
                     </div>
                 </div>
