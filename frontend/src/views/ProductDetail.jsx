@@ -26,6 +26,17 @@ const getFlavors = (product) => {
     return extractFlavorsFromDescription(product?.description || '');
 };
 
+// Mapa nombre de categoría -> slug (coincide con ProductGrid)
+const NAME_TO_SLUG = {
+    "Vapes Desechables": "vapes-desechables",
+    "Pods Recargables": "pods-recargables",
+    "Líquidos": "liquidos",
+    "Accesorios": "accesorios",
+    "Celulares": "celulares",
+    "Perfumes": "perfumes",
+};
+
+
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -81,17 +92,23 @@ const ProductDetail = () => {
         }
     };
 
-
-    console.log('🔍 DEBUG - Current URL:', window.location.href);
-    console.log('🔍 DEBUG - Document referrer:', document.referrer);
     const handleBackToProducts = () => {
-        console.log('🚀 handleBackToProducts ejecutado');
-        console.log('📍 URL actual:', window.location.href);
-        console.log('📍 Referrer:', document.referrer);
-        console.log('📍 Navigate será llamado con: /products');
+        // Si el producto tiene categoría conocida, navega a esa categoría
+        if (product?.category_name && typeof product.category_name === 'string') {
+            const slug = NAME_TO_SLUG[product.category_name.trim()];
+            if (slug) {
+                navigate(`/categoria/${slug}`);
+                return;
+            }
+        }
+        // Si no, navega SIEMPRE a /products (nunca a inicio)
         navigate('/products');
-        console.log('✅ Navigate ejecutado');
     };
+    // Destino de "Volver": categoría si existe, sino /products
+    const backHref =
+        (product?.category_name && NAME_TO_SLUG[product.category_name.trim()])
+            ? `/categoria/${NAME_TO_SLUG[product.category_name.trim()]}`
+            : '/products';
 
 
     if (!product) {
@@ -114,18 +131,21 @@ const ProductDetail = () => {
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Botón volver */}
-                <button
-                    onClick={() => {
-                        console.log('🔥 CLICK en botón Volver detectado');
-                        handleBackToProducts();
+                <Link
+                    to={backHref}
+                    onClick={(e) => {
+                        // cortamos bubbling por si el header intenta capturar
+                        e.stopPropagation();
+                        console.log('🔙 Volver ->', backHref);
                     }}
-                    className="mb-6 flex items-center text-purple-600 hover:text-purple-700 transition-colors"
+                    className="relative z-50 pointer-events-auto mb-6 flex items-center text-purple-600 hover:text-purple-700 transition-colors"
                 >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                     Volver
-                </button>
+                </Link>
+
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="grid md:grid-cols-2 gap-8 p-8">
