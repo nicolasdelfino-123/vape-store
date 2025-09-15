@@ -33,6 +33,7 @@ import OrderDetailPage from "./views/OrderDetailPage.jsx";
 import AddressesPage from "./views/AddressesPage.jsx";
 import AccountDetailsPage from "./views/AccountDetailsPage.jsx";
 import LoginAdmin from "./views/LoginAdmin.jsx";
+import FloatingButtons from "./components/FloatingButtons.jsx";
 
 
 
@@ -74,6 +75,7 @@ const Layout = () => {
   return (
     <div>
       <BrowserRouter basename={basename}>
+        <FloatingButtons />
         <Header />
 
         <Routes>
