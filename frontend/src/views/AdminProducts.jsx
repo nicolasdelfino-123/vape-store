@@ -23,54 +23,127 @@ function mapCategoryId(name) {
     return 1 // default
 }
 
-// ----- Píldoras de sabores (catálogo con activo/inactivo) -----
+const sumActiveFlavorStock = (catalog = []) =>
+    (catalog || [])
+        .filter((x) => x?.active)
+        .reduce((acc, x) => acc + (Number.isFinite(Number(x?.stock)) ? Number(x.stock) : 0), 0)
+
+// ----- Píldoras/lista de sabores con ACTIVO y STOCK -----
 function FlavorPills({ catalog = [], onChange }) {
     const [input, setInput] = useState("")
-    const toggle = (idx) => onChange(catalog.map((f, i) => i === idx ? { ...f, active: !f.active } : f))
-    const remove = (idx) => onChange(catalog.filter((_, i) => i !== idx))
+
+    const normalize = (arr) =>
+        (arr || []).map((f) => ({
+            name: String(f?.name ?? f ?? "").trim(),
+            active: Boolean(f?.active ?? true),
+            stock: Number.isFinite(Number(f?.stock)) ? Number(f.stock) : 0,
+        }))
+
+    const ensure = (next) => onChange(normalize(next))
+
+    const toggle = (idx) => {
+        const next = [...catalog]
+        next[idx] = { ...next[idx], active: !next[idx].active }
+        ensure(next)
+    }
+
+    const remove = (idx) => {
+        const next = catalog.filter((_, i) => i !== idx)
+        ensure(next)
+    }
+
+    const changeName = (idx, name) => {
+        const next = [...catalog]
+        next[idx] = { ...next[idx], name }
+        ensure(next)
+    }
+
+    const changeStock = (idx, stock) => {
+        const n = Number(stock)
+        const next = [...catalog]
+        next[idx] = { ...next[idx], stock: Number.isFinite(n) ? n : 0 }
+        ensure(next)
+    }
+
     const add = () => {
         const t = input.trim()
         if (!t) return
-        onChange([...(catalog || []), { name: t, active: false }])
+        ensure([...(catalog || []), { name: t, active: true, stock: 0 }])
         setInput("")
     }
 
     return (
-        <div>
-            <div className="flex flex-wrap gap-2 mb-2">
-                {catalog.map((f, idx) => (
-                    <span
-                        key={idx}
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs border
-              ${f.active ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}
-                    >
-                        {f.name}
-                        <button
-                            type="button"
-                            onClick={() => toggle(idx)}
-                            title={f.active ? "Desactivar" : "Activar"}
-                            className="w-4 h-4 rounded-full flex items-center justify-center border"
-                        >
-                            {f.active ? "✓" : "×"}
-                        </button>
-                        <button type="button" onClick={() => remove(idx)} title="Quitar" className="text-gray-500">
-                            🗑
-                        </button>
-                    </span>
-                ))}
-            </div>
+        <div className="space-y-2">
             <div className="flex gap-2">
                 <input
                     className="flex-1 border rounded px-2 py-1"
                     placeholder="Agregar sabor y presionar Enter"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" ? (e.preventDefault(), add()) : null}
+                    onKeyDown={(e) => (e.key === "Enter" ? (e.preventDefault(), add()) : null)}
                 />
-                <button type="button" onClick={add} className="px-3 py-1 border rounded">Agregar</button>
+                <button type="button" onClick={add} className="px-3 py-1 border rounded">
+                    Agregar
+                </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-                Click en la {`"${'×'}"`} para inactivar (rojo) / **✓** para activar (verde). Solo los **activos** se publican.
+
+            <div className="border rounded">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="p-2 text-left">Activo</th>
+                            <th className="p-2 text-left">Sabor</th>
+                            <th className="p-2 text-left">Stock</th>
+                            <th className="p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {normalize(catalog).map((f, idx) => (
+                            <tr key={idx} className="border-t">
+                                <td className="p-2">
+                                    <input type="checkbox" checked={f.active} onChange={() => toggle(idx)} />
+                                </td>
+                                <td className="p-2">
+                                    <input
+                                        className="w-full border rounded px-2 py-1"
+                                        value={f.name}
+                                        onChange={(e) => changeName(idx, e.target.value)}
+                                    />
+                                </td>
+                                <td className="p-2">
+                                    <input
+                                        className="w-28 border rounded px-2 py-1 text-right"
+                                        type="number"
+                                        min={0}
+                                        value={f.stock}
+                                        onChange={(e) => changeStock(idx, e.target.value)}
+                                    />
+                                </td>
+                                <td className="p-2 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => remove(idx)}
+                                        className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-50"
+                                        title="Quitar sabor"
+                                    >
+                                        🗑
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {(!catalog || catalog.length === 0) && (
+                            <tr>
+                                <td colSpan={4} className="p-3 text-center text-gray-500">
+                                    Sin sabores cargados
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <p className="text-xs text-gray-500">
+                Solo los <strong>activos</strong> se publican en la web. El stock por sabor se usa si activás el modo “stock por sabor”.
             </p>
         </div>
     )
@@ -96,7 +169,7 @@ export default function AdminProducts() {
     const fetchAll = async () => {
         try {
             const res = await fetch(`${API}/admin/products`, {
-                headers: { "Authorization": `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             })
             if (res.ok) {
                 const data = await res.json()
@@ -107,7 +180,9 @@ export default function AdminProducts() {
         }
     }
 
-    useEffect(() => { fetchAll() }, [])
+    useEffect(() => {
+        fetchAll()
+    }, [])
 
     const shouldShowFlavors = (categoryId) => [1, 3].includes(Number(categoryId))
 
@@ -117,25 +192,37 @@ export default function AdminProducts() {
             const method = form.id ? "PUT" : "POST"
             const url = form.id ? `${API}/admin/products/${form.id}` : `${API}/admin/products`
 
-            // Publicar solo sabores activos (si hay catálogo); si no, usar flavors tal cual
-            const activeFlavors = (form.flavor_catalog
-                ? form.flavor_catalog.filter(x => x.active).map(x => x.name)
-                : (form.flavors || []))
+            // Normalizamos catálogo
+            const catalog = (form.flavor_catalog || []).map((x) => ({
+                name: String(x?.name ?? "").trim(),
+                active: Boolean(x?.active ?? true),
+                stock: Number.isFinite(Number(x?.stock)) ? Number(x.stock) : 0,
+            }))
+
+            const activeFlavors = catalog.filter((x) => x.active).map((x) => x.name)
+            const enabled = shouldShowFlavors(form.category_id) && activeFlavors.length > 0
+
+            // Si está activado el modo, el stock total se calcula como suma de los activos
+            const totalFromFlavors = sumActiveFlavorStock(catalog)
+            const finalStock = form.flavor_stock_mode ? totalFromFlavors : Number(form.stock ?? 0)
 
             const payload = {
                 ...form,
-                short_description: "", // no usamos
+                short_description: form.short_description ?? "",
                 flavors: activeFlavors,
-                flavor_enabled: shouldShowFlavors(form.category_id) && activeFlavors.length > 0,
+                flavor_enabled: enabled,
+                flavor_catalog: catalog, // guardamos el catálogo completo con stock
+                stock: finalStock, // stock total coherente
+                flavor_stock_mode: Boolean(form.flavor_stock_mode), // flag para front/backend
             }
 
             const res = await fetch(url, {
                 method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             })
 
             if (res.ok) {
@@ -143,8 +230,8 @@ export default function AdminProducts() {
                 fetchAll()
                 alert(form.id ? "Producto actualizado" : "Producto creado exitosamente")
             } else {
-                const error = await res.json()
-                alert(`Error: ${error.error || 'No se pudo guardar el producto'}`)
+                const error = await res.json().catch(() => ({}))
+                alert(`Error: ${error.error || "No se pudo guardar el producto"}`)
             }
         } catch (error) {
             console.error("Error saving product:", error)
@@ -152,8 +239,9 @@ export default function AdminProducts() {
         }
     }
 
-    const filtered = products.filter(p => {
-        const matchesSearch = !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.brand?.toLowerCase().includes(q.toLowerCase())
+    const filtered = products.filter((p) => {
+        const matchesSearch =
+            !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.brand?.toLowerCase().includes(q.toLowerCase())
         const matchesCategory = selectedCategory === "Todos" || p.category_name === selectedCategory
         return matchesSearch && matchesCategory
     })
@@ -177,10 +265,12 @@ export default function AdminProducts() {
                 >
                     <option value="Todos">Todas las categorías</option>
                     {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>
+                            {cat}
+                        </option>
                     ))}
                 </select>
-                <button onClick={() => setForm({ category_id: 1 })} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
+                <button onClick={() => setForm({ category_id: 1, flavor_stock_mode: false })} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
                     Nuevo
                 </button>
 
@@ -204,19 +294,19 @@ export default function AdminProducts() {
                             const raw = JSON.parse(text) // array del scraper
 
                             // === 👇 Normalización de nombres para evitar duplicados "similares" ===
-                            const cleanName = n => n.replace(/\s+/g, " ").trim().toLowerCase()
-                            const existingNames = new Set(products.map(p => cleanName(p.name)))
+                            const cleanName = (n) => n.replace(/\s+/g, " ").trim().toLowerCase()
+                            const existingNames = new Set(products.map((p) => cleanName(p.name)))
 
                             const transformed = (raw || [])
-                                .filter(it => !existingNames.has(cleanName(it.name || "")))
-                                .map(it => {
+                                .filter((it) => !existingNames.has(cleanName(it.name || "")))
+                                .map((it) => {
                                     const catId = it.category_id || mapCategoryId(it.category_name)
-                                    const catalog = (it.flavors || []).map(f => ({ name: String(f), active: true })) // los traemos activos
+                                    const catalog = (it.flavors || []).map((f) => ({ name: String(f), active: true, stock: 0 })) // activos + stock 0
                                     return {
                                         id: undefined,
                                         name: it.name || "",
-                                        description: it.description || "",              // ✅ traer descripción real
-                                        short_description: it.short_description || "",  // ✅ traer short description real
+                                        description: it.description || "", // ✅ traer descripción real
+                                        short_description: it.short_description || "", // ✅ traer short description real
                                         brand: it.brand || "",
                                         price: it.price || 0,
                                         stock: it.stock || 0,
@@ -224,8 +314,9 @@ export default function AdminProducts() {
                                         category_id: catId,
                                         category_name: ID_TO_CATEGORY_NAME[catId] || "Vapes Desechables",
                                         flavor_enabled: catalog.length > 0,
-                                        flavor_catalog: catalog,                        // ✅ catálogo completo para edición
-                                        flavors: catalog.map(x => x.name),              // ✅ todos los sabores como activos por defecto
+                                        flavor_catalog: catalog, // ✅ catálogo completo para edición
+                                        flavors: catalog.map((x) => x.name), // ✅ todos los sabores como activos por defecto
+                                        flavor_stock_mode: false, // por defecto
                                         is_active: true,
                                         source_url: it.source_url || "",
                                     }
@@ -242,8 +333,6 @@ export default function AdminProducts() {
                             e.target.value = ""
                         }
                     }}
-
-
                 />
             </div>
 
@@ -264,7 +353,7 @@ export default function AdminProducts() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map(p => (
+                        {filtered.map((p) => (
                             <tr key={p.id} className="border-t">
                                 <td className="p-2">
                                     <div>
@@ -287,29 +376,45 @@ export default function AdminProducts() {
                                 <td className="p-2 text-center">{p.category_name}</td>
                                 <td className="p-2 text-center">
                                     {p.flavor_enabled ? (
-                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                            {p.flavors?.length || 0} sabores
+                                        <span
+                                            className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded"
+                                            title="activos / con stock"
+                                        >
+                                            {p.flavors?.length || 0} sabores ·{" "}
+                                            {(p.flavor_catalog || []).filter((x) => x?.active && Number(x?.stock) > 0).length} con stock
                                         </span>
                                     ) : (
                                         <span className="text-xs text-gray-500">Sin sabores</span>
                                     )}
                                 </td>
                                 <td className="p-2 text-center">
-                                    <span className={`px-2 py-1 rounded text-xs ${p.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                        {p.is_active ? 'Activo' : 'Inactivo'}
+                                    <span
+                                        className={`px-2 py-1 rounded text-xs ${p.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                            }`}
+                                    >
+                                        {p.is_active ? "Activo" : "Inactivo"}
                                     </span>
                                 </td>
                                 <td className="p-2 text-right">
                                     <button
-                                        onClick={() => setForm({
-                                            ...p,
-                                            flavor_catalog: p.flavor_catalog || (p.flavors || []).map(n => ({ name: n, active: true }))
-                                        })}
-
+                                        onClick={() => {
+                                            // Mejora: si no hay flavor_catalog pero sí flavors, los autocompleta
+                                            let catalog = Array.isArray(p.flavor_catalog) ? p.flavor_catalog : [];
+                                            if ((!catalog || catalog.length === 0) && Array.isArray(p.flavors) && p.flavors.length > 0) {
+                                                catalog = p.flavors.map((n) => ({ name: n, active: true, stock: 0 }));
+                                            }
+                                            setForm({
+                                                ...p,
+                                                flavor_catalog: catalog,
+                                                flavor_enabled: p.flavor_enabled ?? (catalog.length > 0),
+                                                flavor_stock_mode: Boolean(p?.flavor_stock_mode ?? false),
+                                            });
+                                        }}
                                         className="px-3 py-1 border rounded hover:bg-gray-50"
                                     >
                                         Editar
                                     </button>
+
                                 </td>
                             </tr>
                         ))}
@@ -317,18 +422,11 @@ export default function AdminProducts() {
                 </table>
             </div>
 
-            {filtered.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                    No se encontraron productos
-                </div>
-            )}
+            {filtered.length === 0 && <div className="text-center py-8 text-gray-500">No se encontraron productos</div>}
 
             {/* Modal edición/creación */}
             {form && (
-                <form
-                    onSubmit={save}
-                    className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
-                >
+                <form onSubmit={save} className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
                     <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-3 max-h-[90vh] overflow-y-auto">
                         <h2 className="text-lg font-semibold">{form.id ? "Editar" : "Nuevo"} Producto</h2>
 
@@ -378,15 +476,32 @@ export default function AdminProducts() {
                             required
                         />
 
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                        <input
-                            className="w-full border rounded px-3 py-2"
-                            placeholder="Stock"
-                            type="number"
-                            value={form.stock || ""}
-                            onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                            required
-                        />
+                        {/* Toggle modo stock por sabor (solo si hay sabores/categoría aplica) */}
+                        {shouldShowFlavors(form.category_id) && (
+                            <label className="flex items-center gap-2 mb-2">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(form.flavor_stock_mode)}
+                                    onChange={(e) => setForm({ ...form, flavor_stock_mode: e.target.checked })}
+                                />
+                                Usar stock por sabor (recomendado si cada sabor tiene stock propio)
+                            </label>
+                        )}
+
+                        {/* Campo de stock general (se oculta si usamos stock por sabor) */}
+                        {!form.flavor_stock_mode && (
+                            <>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                                <input
+                                    className="w-full border rounded px-3 py-2"
+                                    placeholder="Stock"
+                                    type="number"
+                                    value={form.stock ?? 0}
+                                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                                    required
+                                />
+                            </>
+                        )}
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
                         <input
@@ -401,12 +516,13 @@ export default function AdminProducts() {
                             value={form.category_id || ""}
                             onChange={(e) => {
                                 const categoryId = parseInt(e.target.value)
+                                const show = shouldShowFlavors(categoryId)
                                 setForm({
                                     ...form,
                                     category_id: categoryId,
                                     category_name: ID_TO_CATEGORY_NAME[categoryId] || "Vapes Desechables",
-                                    flavor_enabled: shouldShowFlavors(categoryId),
-                                    flavors: shouldShowFlavors(categoryId) ? (form.flavors || []) : []
+                                    flavor_enabled: show,
+                                    flavors: show ? form.flavors || [] : [],
                                 })
                             }}
                             required
@@ -433,16 +549,28 @@ export default function AdminProducts() {
                                 </label>
 
                                 {form.flavor_enabled && (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Sabores (activar/desactivar)</label>
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium mb-1">
+                                            Sabores (activar/desactivar y stock)
+                                        </label>
                                         <FlavorPills
-                                            catalog={form.flavor_catalog || (form.flavors || []).map(n => ({ name: n, active: true }))}
-                                            onChange={(next) => setForm({
-                                                ...form,
-                                                flavor_catalog: next,
-                                                flavors: next.filter(x => x.active).map(x => x.name)
-                                            })}
+                                            catalog={
+                                                form.flavor_catalog ||
+                                                (form.flavors || []).map((n) => ({ name: n, active: true, stock: 0 }))
+                                            }
+                                            onChange={(next) =>
+                                                setForm({
+                                                    ...form,
+                                                    flavor_catalog: next,
+                                                    flavors: next.filter((x) => x.active).map((x) => x.name),
+                                                })
+                                            }
                                         />
+                                        {form.flavor_stock_mode && (
+                                            <div className="text-xs text-gray-600">
+                                                Total (activos): <strong>{sumActiveFlavorStock(form.flavor_catalog)}</strong> unidades
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </>
@@ -475,7 +603,9 @@ export default function AdminProducts() {
                     <div className="bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-semibold">Importar productos ({importPreview.length})</h2>
-                            <button onClick={() => setImportOpen(false)} className="px-3 py-1 border rounded">Cerrar</button>
+                            <button onClick={() => setImportOpen(false)} className="px-3 py-1 border rounded">
+                                Cerrar
+                            </button>
                         </div>
 
                         <div className="border rounded">
@@ -513,12 +643,13 @@ export default function AdminProducts() {
                                     try {
                                         setImporting(true)
                                         for (const p of importPreview) {
-                                            const active = (p.flavor_catalog || []).filter(x => x.active).map(x => x.name)
+                                            const active = (p.flavor_catalog || []).filter((x) => x.active).map((x) => x.name)
                                             const body = {
                                                 ...p,
-                                                flavors: active,                       // solo los activos se publican
+                                                flavors: active, // solo los activos se publican
                                                 flavor_enabled: p.flavor_catalog.length > 0,
-                                                flavor_catalog: p.flavor_catalog       // guardamos el catálogo completo para edición
+                                                flavor_catalog: p.flavor_catalog, // guardamos el catálogo completo para edición
+                                                flavor_stock_mode: false,
                                             }
 
                                             // tu API usa category_id; no necesita category_name
@@ -527,9 +658,9 @@ export default function AdminProducts() {
                                                 method: "POST",
                                                 headers: {
                                                     "Content-Type": "application/json",
-                                                    "Authorization": `Bearer ${token}`
+                                                    Authorization: `Bearer ${token}`,
                                                 },
-                                                body: JSON.stringify(body)
+                                                body: JSON.stringify(body),
                                             })
                                             if (!res.ok) {
                                                 const err = await res.json().catch(() => ({}))

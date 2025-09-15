@@ -54,27 +54,32 @@ class Category(db.Model):
 
 
 
+
+
 class Product(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(1000), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
-
     short_description: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
-
     price: Mapped[float] = mapped_column(Float, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
-    # NUEVO: lista de sabores para pods desechables (opcional)
-   
+
+    # EXISTENTE: lista simple de sabores visibles (strings)
     flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
     flavor_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=True, default=False)
-    # Campos adicionales para vapes
-    puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Para desechables
-    nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Nicotina
-    volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Volumen líquidos
+
+    # NUEVO: catálogo completo de sabores con stock por sabor
+    flavor_catalog: Mapped[Optional[list[dict]]] = mapped_column(JSONB, nullable=True, default=list)  # [{name, active, stock}]
+    flavor_stock_mode: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
+
+    # Campos adicionales
+    puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
 
@@ -98,34 +103,38 @@ class Product(db.Model):
             'is_active': self.is_active,
             'flavors': self.flavors or [],
             'flavor_enabled': self.flavor_enabled,
+            # NUEVO: exponemos al front
+            'flavor_catalog': self.flavor_catalog or [],
+            'flavor_stock_mode': self.flavor_stock_mode,
             'puffs': self.puffs,
             'nicotine_mg': self.nicotine_mg,
             'volume_ml': self.volume_ml,
             'created_at': self.created_at.isoformat(),
         }
 
-
-
 class CartItem(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     product_id: Mapped[int] = mapped_column(ForeignKey("product.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # NUEVO: sabor elegido
+    selected_flavor: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
-    
-    # Relaciones
     user: Mapped["User"] = relationship("User")
     product: Mapped["Product"] = relationship("Product", back_populates="cart_items")
-    
+
     def serialize(self):
         return {
             'id': self.id,
             'user_id': self.user_id,
             'product_id': self.product_id,
             'quantity': self.quantity,
+            'selected_flavor': self.selected_flavor,
             'product': self.product.serialize() if self.product else None,
             'created_at': self.created_at.isoformat(),
         }
+
 
 
 class Order(db.Model):

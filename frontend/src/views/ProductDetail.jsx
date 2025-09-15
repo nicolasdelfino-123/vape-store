@@ -51,10 +51,28 @@ const ProductDetail = () => {
     // Calcular opciones de sabor de forma segura
     const flavorOptions = getFlavors(product);
 
+    // Helper para stock por sabor
+    const getFlavorStock = (flavor) => {
+        if (!product || !Array.isArray(product.flavor_catalog)) return null;
+        const found = product.flavor_catalog.find(f => f.name === flavor);
+        return found ? found.stock : null;
+    };
+
+    const getMaxStock = () => {
+        if (selectedFlavor && Array.isArray(product.flavor_catalog)) {
+            const found = product.flavor_catalog.find(f => f.name === selectedFlavor);
+            if (found && typeof found.stock === 'number') return found.stock;
+        }
+        return product.stock;
+    };
+
     const handleAddToCart = () => {
-        // si hay sabores posibles, exigir uno seleccionado
         if (flavorOptions.length > 0 && !selectedFlavor) {
             setFlavorError('Elegí un sabor antes de agregar al carrito');
+            return;
+        }
+        if (quantity > getMaxStock()) {
+            setFlavorError(`Solo hay ${getMaxStock()} unidades disponibles${selectedFlavor ? ' para ese sabor' : ''}`);
             return;
         }
         if (actions && actions.addToCart && product) {
@@ -164,7 +182,7 @@ const ProductDetail = () => {
                                     </button>
                                     <span className="px-4 py-2 font-medium">{quantity}</span>
                                     <button
-                                        onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                                        onClick={() => setQuantity(Math.min(getMaxStock(), quantity + 1))}
                                         className="px-3 py-2 text-gray-600 hover:text-gray-800"
                                     >
                                         +
@@ -174,7 +192,9 @@ const ProductDetail = () => {
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={
-                                        product.stock === 0 || (flavorOptions.length > 0 && !selectedFlavor)
+                                        product.stock === 0 ||
+                                        (flavorOptions.length > 0 && !selectedFlavor) ||
+                                        quantity > getMaxStock()
                                     }
                                     className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -189,8 +209,8 @@ const ProductDetail = () => {
                                         type="button"
                                         onClick={() => setActiveTab('desc')}
                                         className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'desc'
-                                                ? 'border-purple-600 text-purple-700 font-semibold'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            ? 'border-purple-600 text-purple-700 font-semibold'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Descripción
@@ -199,8 +219,8 @@ const ProductDetail = () => {
                                         type="button"
                                         onClick={() => setActiveTab('info')}
                                         className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'info'
-                                                ? 'border-purple-600 text-purple-700 font-semibold'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            ? 'border-purple-600 text-purple-700 font-semibold'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Información adicional

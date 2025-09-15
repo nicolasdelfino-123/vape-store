@@ -18,7 +18,7 @@ export default function FloatingButtons() {
                 className="
           fixed z-[9999]
           right-3 sm:right-4
-          bottom-4 sm:bottom-auto sm:top-1/3
+          bottom-16
           flex flex-col gap-3
           pointer-events-none
         "
