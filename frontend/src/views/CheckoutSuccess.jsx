@@ -20,7 +20,7 @@ const CheckoutSuccess = () => {
             actions.showToast('¡Pago realizado con éxito!', 'success')
         }
     }, [status, actions])
-
+    console.log('🔄 ProductDetail RENDER - ID:', id);
     return (
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
             <div className="bg-white rounded-lg shadow-lg p-8">

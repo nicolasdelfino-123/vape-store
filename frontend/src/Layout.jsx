@@ -80,7 +80,7 @@ const Layout = () => {
 
         <Routes>
           {/* ===== Rutas que ya tenías ===== */}
-          <Route exact path="/" element={<Home />} />
+          <Route exact path="/" element={<Inicio />} />
           <Route path="/login" element={<Login />} />
           <Route path="/setup-password" element={<SetupPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Context } from '../js/store/appContext.jsx';
 
 // --- helpers de sabores ---
@@ -81,9 +81,18 @@ const ProductDetail = () => {
         }
     };
 
+
+    console.log('🔍 DEBUG - Current URL:', window.location.href);
+    console.log('🔍 DEBUG - Document referrer:', document.referrer);
     const handleBackToProducts = () => {
-        navigate(-1); // Volver a la página anterior
+        console.log('🚀 handleBackToProducts ejecutado');
+        console.log('📍 URL actual:', window.location.href);
+        console.log('📍 Referrer:', document.referrer);
+        console.log('📍 Navigate será llamado con: /products');
+        navigate('/products');
+        console.log('✅ Navigate ejecutado');
     };
+
 
     if (!product) {
         return (
@@ -106,7 +115,10 @@ const ProductDetail = () => {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Botón volver */}
                 <button
-                    onClick={handleBackToProducts}
+                    onClick={() => {
+                        console.log('🔥 CLICK en botón Volver detectado');
+                        handleBackToProducts();
+                    }}
                     className="mb-6 flex items-center text-purple-600 hover:text-purple-700 transition-colors"
                 >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

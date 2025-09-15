@@ -190,13 +190,11 @@ def get_all_products_admin():
     """Obtener todos los productos (incluyendo inactivos) para admin"""
     if not admin_required():
         return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador.'}), 403
+    
     try:
         products = Product.query.all()  # Incluye productos inactivos
-        # Asegura que flavor_catalog siempre sea array
-        return jsonify([{
-            **product.serialize(),
-            'flavor_catalog': product.flavor_catalog or []
-        } for product in products]), 200
+        return jsonify([product.serialize() for product in products]), 200
+        
     except Exception as e:
         return jsonify({'error': f'Error al obtener productos: {str(e)}'}), 500
 

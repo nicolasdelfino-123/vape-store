@@ -40,10 +40,28 @@ function Inicio() {
         }
     }, []); // Array de dependencias vacío para que solo se ejecute una vez
 
+    // Animación elegante de aparición con IntersectionObserver
+    useEffect(() => {
+        const observer = new window.IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-visible');
+                    }
+                });
+            },
+            { threshold: 0.15 }
+        );
+        document.querySelectorAll('.fade-in-section').forEach((el) => {
+            observer.observe(el);
+        });
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Hero Section */}
-            <section className="bg-gray-900 text-white py-8 md:py-16 relative overflow-hidden">
+            {/* Hero Section - imagen ocupa más espacio */}
+            <section className="bg-gray-900 text-white min-h-[65vh] flex flex-col justify-end relative overflow-hidden">
                 {/* Background Image */}
                 <div className="absolute inset-0 z-0">
                     <img
@@ -54,9 +72,8 @@ function Inicio() {
                         decoding="async"
                     />
                 </div>
-
                 {/* Content */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 pb-8">
                     <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 text-white">¡Envíos a todo el país!</h1>
                     <p className="text-lg sm:text-xl md:text-2xl mb-6 md:mb-8 text-gray-200">Hacemos envíos a toda la Argentina</p>
                     <button
@@ -68,10 +85,8 @@ function Inicio() {
                 </div>
             </section>
 
-
-
-            {/* Features Section */}
-            <section className="py-8 md:py-16 bg-white">
+            {/* Features Section - queda justo debajo y visible en pantalla completa */}
+            <section className="py-8 md:py-12 bg-white fade-in-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                         <div className="text-center">
@@ -126,7 +141,7 @@ function Inicio() {
 
             {/* banner animado */}
             {/* banner animado */}
-            <section className="relative bg-gray-800 py-4">
+            <section className="relative bg-gray-800 py-4 fade-in-section" id="banner-animado">
                 {/* Fondo */}
                 <div className="absolute inset-0 z-0">
                     <img
@@ -180,7 +195,7 @@ function Inicio() {
             </section>
             {/* Categorías (cards con imagen + botón VER) */}
             {/* Categorías (cards con imagen + botón VER) */}
-            <section className="py-6 md:py-10">
+            <section className="py-6 md:py-10 fade-in-section" id="categorias-animadas">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
@@ -323,7 +338,7 @@ function Inicio() {
 
 
             {/* Products Section */}
-            <section id="productos" className="py-8 md:py-16">
+            <section id="productos" className="py-8 md:py-16 fade-in-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Productos Destacados</h2>
 
@@ -462,6 +477,17 @@ function Inicio() {
             </section >
 
 
+            <style>{`
+.fade-in-section {
+  opacity: 0;
+  transform: translateY(40px) scale(0.98);
+  transition: opacity 0.8s cubic-bezier(.4,0,.2,1), transform 0.8s cubic-bezier(.4,0,.2,1);
+}
+.fade-in-section.fade-in-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+`}</style>
         </div >
     );
 }
