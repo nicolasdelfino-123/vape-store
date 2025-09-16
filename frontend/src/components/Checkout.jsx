@@ -1,15 +1,21 @@
 // src/components/Checkout.jsx
-import React, { useState, useContext, useEffect } from 'react'
+import React, { useState, useContext, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Context } from '../js/store/appContext'
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react'
+
+const provincesAR = [
+    "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", "Entre Ríos",
+    "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", "Misiones", "Neuquén",
+    "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
+    "Santiago del Estero", "Tierra del Fuego", "Tucumán", "Ciudad Autónoma de Buenos Aires"
+]
 
 const Checkout = () => {
     const { store, actions } = useContext(Context)
     const navigate = useNavigate()
 
-    // Inicializar MercadoPago con tu Public Key
-    // Inicializar MercadoPago con tu Public Key desde .env (sin fallback a prod)
+    // === MP init (igual que tenías) ===
     useEffect(() => {
         try {
             const pk = import.meta.env.VITE_MP_PUBLIC_KEY
@@ -18,54 +24,142 @@ const Checkout = () => {
                 alert('Configura VITE_MP_PUBLIC_KEY en el frontend (.env)')
                 return
             }
-            console.log('Inicializando MercadoPago SDK con clave TEST…')
             initMercadoPago(pk, { locale: 'es-AR' })
         } catch (err) {
             console.error('Error inicializando MercadoPago:', err)
         }
     }, [])
 
+    // === Traer direcciones guardadas para autocompletar (si no estuvieran ya) ===
+    useEffect(() => {
+        // Si todavía no las tenemos, las pedimos (no rompe si ya están)
+        if (!store.billingAddress || !store.shippingAddress) {
+            actions.fetchUserAddresses?.().catch(() => { })
+        }
+    }, [])
 
+    // Helpers para partir el nombre del user
+    const userFirstName = useMemo(() => (store.user?.name || '').split(' ')[0] || '', [store.user])
+    const userLastName = useMemo(() => (store.user?.name || '').split(' ').slice(1).join(' ') || '', [store.user])
 
-    const [customerData, setCustomerData] = useState({
+    // Prefill desde store.billingAddress / shippingAddress
+    // En AddressesPage guardamos con keys: name, lastname, dni, country, address, apartment, city, province, postalCode, phone, email
+    const [billing, setBilling] = useState({
+        firstName: userFirstName,
+        lastName: userLastName,
         email: store.user?.email || '',
-        firstName: store.user?.name?.split(' ')[0] || '',
-        lastName: store.user?.name?.split(' ').slice(1).join(' ') || '',
-        phone: '',
-        address: '',
-        city: '',
-        zipCode: ''
+        phone: store.billingAddress?.phone || '',
+        address: store.billingAddress?.address || '',
+        apartment: store.billingAddress?.apartment || '',
+        city: store.billingAddress?.city || '',
+        province: store.billingAddress?.province || 'Córdoba',
+        zipCode: store.billingAddress?.postalCode || '',
+        country: store.billingAddress?.country || 'Argentina',
+        dni: store.dni || store.billingAddress?.dni || '',
+        newsletter: false
     })
+
+    const [shippingDifferent, setShippingDifferent] = useState(false)
+    const [shipping, setShipping] = useState({
+        firstName: userFirstName,
+        lastName: userLastName,
+        email: store.user?.email || '',
+        phone: store.shippingAddress?.phone || '',
+        address: store.shippingAddress?.address || '',
+        apartment: store.shippingAddress?.apartment || '',
+        city: store.shippingAddress?.city || '',
+        province: store.shippingAddress?.province || 'Córdoba',
+        zipCode: store.shippingAddress?.postalCode || '',
+        country: store.shippingAddress?.country || 'Argentina',
+        dni: store.dni || store.shippingAddress?.dni || ''
+    })
+
+    // Cuando llegan/actualizan direcciones en store, refrescamos los forms (sin pisar lo que el user ya escribió manualmente)
+    useEffect(() => {
+        if (store.billingAddress) {
+            setBilling(prev => ({
+                ...prev,
+                phone: prev.phone || store.billingAddress.phone || '',
+                address: prev.address || store.billingAddress.address || '',
+                apartment: prev.apartment || store.billingAddress.apartment || '',
+                city: prev.city || store.billingAddress.city || '',
+                province: prev.province || store.billingAddress.province || 'Córdoba',
+                zipCode: prev.zipCode || store.billingAddress.postalCode || '',
+                country: prev.country || store.billingAddress.country || 'Argentina',
+                dni: prev.dni || store.dni || store.billingAddress.dni || ''
+            }))
+        }
+    }, [store.billingAddress, store.dni])
+
+    useEffect(() => {
+        if (store.shippingAddress) {
+            setShipping(prev => ({
+                ...prev,
+                phone: prev.phone || store.shippingAddress.phone || '',
+                address: prev.address || store.shippingAddress.address || '',
+                apartment: prev.apartment || store.shippingAddress.apartment || '',
+                city: prev.city || store.shippingAddress.city || '',
+                province: prev.province || store.shippingAddress.province || 'Córdoba',
+                zipCode: prev.zipCode || store.shippingAddress.postalCode || '',
+                country: prev.country || store.shippingAddress.country || 'Argentina',
+                dni: prev.dni || store.dni || store.shippingAddress.dni || ''
+            }))
+        }
+    }, [store.shippingAddress, store.dni])
+
+    // Manejo inputs
+    const handleBillingChange = (e) => {
+        const { name, value, type, checked } = e.target
+        setBilling(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    }
+    const handleShippingChange = (e) => {
+        const { name, value } = e.target
+        setShipping(prev => ({ ...prev, [name]: value }))
+    }
 
     const [preferenceId, setPreferenceId] = useState(null)
     const [loading, setLoading] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState('')
 
-    // Calcular totales
+    // Totales
     const subtotal = store.cart?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
-    const shipping = 0 // Gratis por ahora
-    const total = subtotal + shipping
+    const shippingCost = 0
+    const total = subtotal + shippingCost
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target
-        setCustomerData(prev => ({
-            ...prev,
-            [name]: value
-        }))
-    }
+    // Validación mínima
+    const billingValid =
+        billing.email &&
+        billing.firstName &&
+        billing.lastName &&
+        billing.phone &&
+        billing.address &&
+        billing.city &&
+        billing.province &&
+        billing.zipCode &&
+        billing.country &&
+        billing.dni
+
+    const shippingValid = !shippingDifferent || (
+        shipping.firstName &&
+        shipping.lastName &&
+        shipping.phone &&
+        shipping.address &&
+        shipping.city &&
+        shipping.province &&
+        shipping.zipCode &&
+        shipping.country &&
+        shipping.dni
+    )
+
+    const isFormValid = () => billingValid && shippingValid && paymentMethod === 'mercadopago'
 
     const createPreference = async () => {
         setLoading(true)
         try {
-            console.log('=== CREANDO PREFERENCIA ===')
-            console.log('Store cart:', store.cart)
-            console.log('Customer data:', customerData)
-
             if (!store.cart || store.cart.length === 0) {
                 throw new Error('El carrito está vacío')
             }
 
-            // Items en formato correcto
             const items = store.cart.map((item) => {
                 const qty = Math.max(1, parseInt(item.quantity || 1, 10))
                 const price = Number(item.price)
@@ -77,20 +171,25 @@ const Checkout = () => {
                     title: item.name,
                     quantity: qty,
                     unit_price: price,
-                    // currency_id lo pone el backend; si querés redundar:
-                    // currency_id: 'ARS',
                 }
             })
 
-            // Estructura mínima requerida por tu backend
+            // Enviamos info del payer (no rompe tu backend; es útil para pref.)
             const preferenceData = {
                 items,
                 payer: {
-                    email: customerData.email,
-                    name: customerData.firstName || '',
-                    surname: customerData.lastName || ''
+                    email: billing.email,
+                    name: billing.firstName,
+                    surname: billing.lastName,
+                    identification: billing.dni ? { type: 'DNI', number: String(billing.dni) } : undefined,
+                    phone: billing.phone ? { area_code: '', number: String(billing.phone) } : undefined,
+                    address: billing.address ? {
+                        street_name: billing.address,
+                        zip_code: billing.zipCode
+                    } : undefined
                 },
-                // El backend setea back_urls; no es obligatorio mandarlas desde acá.
+                // Si querés, podés mandar un shipping_address también:
+                // shipments lo maneja el backend si lo necesitas.
             }
 
             const token = localStorage.getItem('token')
@@ -104,44 +203,25 @@ const Checkout = () => {
                 body: JSON.stringify(preferenceData)
             })
 
-            console.log('Response status:', response.status)
-
             if (!response.ok) {
                 const errorText = await response.text()
-                console.error('Response error:', errorText)
                 let errorData
                 try { errorData = JSON.parse(errorText) } catch { errorData = { error: errorText } }
                 throw new Error(errorData.error || `Error HTTP ${response.status}`)
             }
 
             const data = await response.json()
-            console.log('Response data exitosa:', data)
-
             if (data.preference_id) {
                 setPreferenceId(data.preference_id)
-                console.log('Preference ID configurado:', data.preference_id)
             } else {
                 throw new Error('No se recibió preference_id en la respuesta')
             }
-
         } catch (error) {
             console.error('Error creating preference:', error)
             alert(`Error al crear la preferencia de pago: ${error.message}`)
         } finally {
             setLoading(false)
         }
-    }
-
-
-    const isFormValid = () => {
-        return customerData.email &&
-            customerData.firstName &&
-            customerData.lastName &&
-            customerData.phone &&
-            customerData.address &&
-            customerData.city &&
-            customerData.zipCode &&
-            paymentMethod === 'mercadopago'
     }
 
     if (!store.cart || store.cart.length === 0) {
@@ -166,35 +246,31 @@ const Checkout = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Finalizar Compra</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Formulario de datos */}
+                {/* COLUMN IZQ: Formulario */}
                 <div className="space-y-6">
+                    {/* Detalles de facturación */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-semibold mb-4">Datos de contacto</h2>
+                        <h2 className="text-xl font-semibold mb-4">Detalles de facturación</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nombre *
-                                </label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
                                 <input
                                     type="text"
                                     name="firstName"
-                                    value={customerData.firstName}
-                                    onChange={handleInputChange}
+                                    value={billing.firstName}
+                                    onChange={handleBillingChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                     required
                                 />
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Apellido *
-                                </label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
                                 <input
                                     type="text"
                                     name="lastName"
-                                    value={customerData.lastName}
-                                    onChange={handleInputChange}
+                                    value={billing.lastName}
+                                    onChange={handleBillingChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                     required
                                 />
@@ -202,89 +278,293 @@ const Checkout = () => {
                         </div>
 
                         <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email *
-                            </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">País *</label>
+                            <select
+                                name="country"
+                                value={billing.country}
+                                onChange={handleBillingChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                            >
+                                <option value="Argentina">Argentina</option>
+                            </select>
+                        </div>
+
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
                             <input
-                                type="email"
-                                name="email"
-                                value={customerData.email}
-                                onChange={handleInputChange}
+                                type="text"
+                                name="address"
+                                value={billing.address}
+                                onChange={handleBillingChange}
+                                placeholder="Calle y número"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                 required
                             />
                         </div>
 
                         <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Teléfono *
-                            </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Piso, departamento, etc. (opcional)</label>
                             <input
-                                type="tel"
-                                name="phone"
-                                value={customerData.phone}
-                                onChange={handleInputChange}
-                                placeholder="11-1234-5678"
+                                type="text"
+                                name="apartment"
+                                value={billing.apartment}
+                                onChange={handleBillingChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
-                                required
                             />
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
+                                <input
+                                    type="text"
+                                    name="city"
+                                    value={billing.city}
+                                    onChange={handleBillingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
+                                <select
+                                    name="province"
+                                    value={billing.province}
+                                    onChange={handleBillingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                >
+                                    {provincesAR.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Código postal *</label>
+                                <input
+                                    type="text"
+                                    name="zipCode"
+                                    value={billing.zipCode}
+                                    onChange={handleBillingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={billing.phone}
+                                    onChange={handleBillingChange}
+                                    placeholder="+549..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección de correo electrónico *</label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={billing.email}
+                                    onChange={handleBillingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">DNI *</label>
+                                <input
+                                    type="text"
+                                    name="dni"
+                                    value={billing.dni}
+                                    onChange={handleBillingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    name="newsletter"
+                                    checked={billing.newsletter}
+                                    onChange={handleBillingChange}
+                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                />
+                                <span className="ml-2 text-sm text-gray-700">
+                                    Deseo inscribirme para recibir actualizaciones y noticias por correo electrónico (opcional)
+                                </span>
+                            </label>
+                        </div>
+
+                        <div className="mt-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={shippingDifferent}
+                                    onChange={(e) => setShippingDifferent(e.target.checked)}
+                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                />
+                                <span className="ml-2 text-sm text-gray-700">¿Enviar a una dirección diferente?</span>
+                            </label>
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-semibold mb-4">Dirección de entrega</h2>
+                    {/* Dirección de envío (si es diferente) */}
+                    {shippingDifferent && (
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <h2 className="text-xl font-semibold mb-4">Dirección de entrega (envío)</h2>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Dirección *
-                                </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                                    <input
+                                        type="text"
+                                        name="firstName"
+                                        value={shipping.firstName}
+                                        onChange={handleShippingChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                                    <input
+                                        type="text"
+                                        name="lastName"
+                                        value={shipping.lastName}
+                                        onChange={handleShippingChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">País *</label>
+                                <select
+                                    name="country"
+                                    value={shipping.country}
+                                    onChange={handleShippingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                >
+                                    <option value="Argentina">Argentina</option>
+                                </select>
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
                                 <input
                                     type="text"
                                     name="address"
-                                    value={customerData.address}
-                                    onChange={handleInputChange}
+                                    value={shipping.address}
+                                    onChange={handleShippingChange}
                                     placeholder="Calle y número"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                     required
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Piso, departamento, etc. (opcional)</label>
+                                <input
+                                    type="text"
+                                    name="apartment"
+                                    value={shipping.apartment}
+                                    onChange={handleShippingChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                />
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Ciudad *
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
                                     <input
                                         type="text"
                                         name="city"
-                                        value={customerData.city}
-                                        onChange={handleInputChange}
+                                        value={shipping.city}
+                                        onChange={handleShippingChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                         required
                                     />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Código Postal *
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
+                                    <select
+                                        name="province"
+                                        value={shipping.province}
+                                        onChange={handleShippingChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                    >
+                                        {provincesAR.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Código postal *</label>
                                     <input
                                         type="text"
                                         name="zipCode"
-                                        value={customerData.zipCode}
-                                        onChange={handleInputChange}
+                                        value={shipping.zipCode}
+                                        onChange={handleShippingChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={shipping.phone}
+                                        onChange={handleShippingChange}
+                                        placeholder="+549..."
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Dirección de correo electrónico *</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={shipping.email}
+                                        onChange={handleShippingChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">DNI *</label>
+                                    <input
+                                        type="text"
+                                        name="dni"
+                                        value={shipping.dni}
+                                        onChange={handleShippingChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                         required
                                     />
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Resumen del pedido */}
+                {/* COLUMN DER: Resumen + Pago */}
                 <div className="space-y-6">
+                    {/* Resumen */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
                         <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
 
@@ -323,9 +603,8 @@ const Checkout = () => {
                         </div>
                     </div>
 
-                    {/* Botón de pago */}
+                    {/* Pago */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
-                        {/* Método de pago */}
                         <div className="mb-6">
                             <h3 className="text-lg font-semibold mb-4">Método de pago</h3>
                             <div className="border border-gray-200 rounded-lg p-4">
@@ -356,8 +635,8 @@ const Checkout = () => {
                                 onClick={createPreference}
                                 disabled={!isFormValid() || loading}
                                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${isFormValid() && !loading
-                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? 'Procesando...' : 'Continuar al pago'}
@@ -374,9 +653,7 @@ const Checkout = () => {
                                             redirectMode: 'self'
                                         }}
                                         customization={{
-                                            texts: {
-                                                valueProp: 'smart_option'
-                                            }
+                                            texts: { valueProp: 'smart_option' }
                                         }}
                                         onReady={() => console.log('Wallet ready')}
                                         onError={(error) => console.error('Wallet error:', error)}
