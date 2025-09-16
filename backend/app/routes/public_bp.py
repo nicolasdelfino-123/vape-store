@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app import db
 from app.models import Product, Category
 
+
 public_bp = Blueprint('public', __name__)
 
 @public_bp.route('/')
@@ -92,4 +93,32 @@ def get_products_by_category(category_id):
         return jsonify({'error': 'Error al obtener productos de la categoría: ' + str(e)}), 500
     
 
-    
+@app.route('/api/send-mail', methods=['POST'])
+def send_mail():
+    data = request.get_json()
+    name = data.get("name")
+    email = data.get("email")
+    phone = data.get("phone")
+    message = data.get("message")
+
+    body = f"""
+    Nueva solicitud mayorista:
+    Nombre: {name}
+    Email: {email}
+    Teléfono: {phone}
+    Mensaje: {message}
+    """
+
+    try:
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = "Nueva solicitud mayorista"
+        msg["From"] = formataddr(("Web Zarpados Vaps", os.getenv("SMTP_USER")))
+        msg["To"] = "nicolasdelfino585@gmail.com"
+
+        with smtplib.SMTP_SSL(os.getenv("SMTP_HOST"), 465) as server:
+            server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
+            server.sendmail(os.getenv("SMTP_USER"), ["nicolasdelfino585@gmail.com"], msg.as_string())
+
+        return jsonify({"message": "ok"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

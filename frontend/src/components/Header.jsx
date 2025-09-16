@@ -198,7 +198,12 @@ export default function Header() {
               )}
             </div>
 
-            <a href="/#ofertas" className="hover:text-purple-400 transition-colors text-gray-300">Ofertas</a>
+            <Link
+              to="/mayorista"
+              className="hover:text-purple-400 transition-colors text-gray-300"
+            >
+              Mayoristas
+            </Link>
             <a href="/#contacto" className="hover:text-purple-400 transition-colors text-gray-300">Contacto</a>
           </nav>
 
@@ -282,20 +287,20 @@ export default function Header() {
                 </div>
               </div>
 
-              <a
-                href="/#ofertas"
+              <Link
+                to="/mayorista"
                 className="block px-3 py-2 text-gray-200 hover:text-purple-400 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Ofertas
-              </a>
-              <a
-                href="/#contacto"
+                Mayoristas
+              </Link>
+              <Link
+                to="/#contacto"
                 className="block px-3 py-2 hover:text-purple-400 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contacto
-              </a>
+              </Link>
 
               {/* Mobile: Ingresar solo si NO hay usuario */}
               {store.user ? (

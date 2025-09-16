@@ -78,6 +78,7 @@ export default function ProductCard({ product }) {
           title={product.name}
         >
           {product.name}
+          {product.selectedFlavor ? ` (${product.selectedFlavor})` : ""}
         </h3>
 
         {/* 3) Categoría */}

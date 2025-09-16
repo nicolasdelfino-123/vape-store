@@ -4,8 +4,13 @@ import { Context } from "../js/store/appContext.jsx";
 import { useNavigate, Link } from "react-router-dom";
 
 // helper para título robusto
-const getTitle = (it) =>
-  String(it?.name ?? it?.product?.name ?? it?.title ?? "Producto");
+const getTitle = (it) => {
+  let base = String(it?.name ?? it?.product?.name ?? it?.title ?? "Producto");
+  if (it.selectedFlavor) {
+    base += ` (${it.selectedFlavor})`;
+  }
+  return base;
+};
 
 export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClose }) {
   const { store, actions } = useContext(Context);
