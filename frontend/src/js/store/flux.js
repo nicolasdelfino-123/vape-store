@@ -14,6 +14,9 @@ const getState = ({ getStore, getActions, setStore }) => {
 			orders: [],
 			userAddress: { address: "", phone: "" },
 			updateStatusMsg: "",
+			billingAddress: null,   // ← NUEVO: JSON de facturación
+			shippingAddress: null,  // ← NUEVO: JSON de envío
+			dni: "",
 
 			// Toast notifications
 			toast: {
@@ -23,6 +26,85 @@ const getState = ({ getStore, getActions, setStore }) => {
 			}
 		},
 		actions: {
+
+			getAuthHeaders: () => {
+				const token = localStorage.getItem("token");
+				return {
+					"Content-Type": "application/json",
+					...(token ? { "Authorization": `Bearer ${token}` } : {})
+				};
+			},
+			fetchUserAddresses: async () => {
+				const store = getStore();
+				const token = localStorage.getItem("token");
+				if (!token) return null;
+
+				try {
+					const res = await fetch(`${backendUrl}/me/address`, {
+						headers: { "Authorization": `Bearer ${token}` }
+					});
+					if (!res.ok) throw new Error("No se pudo obtener direcciones");
+					const data = await res.json(); // { billing_address, shipping_address, dni }
+
+					setStore({
+						...store,
+						billingAddress: data.billing_address || null,
+						shippingAddress: data.shipping_address || null,
+						dni: data.dni || ""
+					});
+
+					return data;
+				} catch (e) {
+					console.error("fetchUserAddresses:", e);
+					return null;
+				}
+			},
+			fetchUserBillingAddress: async () => {
+				const data = await getActions().fetchUserAddresses();
+				return data?.billing_address || null;
+			},
+
+			fetchUserShippingAddress: async () => {
+				const data = await getActions().fetchUserAddresses();
+				return data?.shipping_address || null;
+			},
+			updateUserAddressTyped: async (type, payload) => {
+				const store = getStore();
+				const token = localStorage.getItem("token");
+				if (!token) return false;
+
+				try {
+					const res = await fetch(`${backendUrl}/me/address`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							"Authorization": `Bearer ${token}`
+						},
+						body: JSON.stringify({ type, payload })
+					});
+
+					if (!res.ok) {
+						const err = await res.json().catch(() => ({}));
+						console.error("updateUserAddressTyped:", err);
+						return false;
+					}
+
+					// Refrescamos del backend para mantener fuente de verdad
+					const refreshed = await getActions().fetchUserAddresses();
+
+					// Mensajito opcional
+					setStore({
+						...store,
+						updateStatusMsg: `Dirección de ${type} actualizada`
+					});
+
+					return !!refreshed;
+				} catch (e) {
+					console.error("updateUserAddressTyped:", e);
+					return false;
+				}
+			},
+
 
 			exampleFunction: () => {
 				console.log(backendUrl)
@@ -111,6 +193,9 @@ const getState = ({ getStore, getActions, setStore }) => {
 								const userData = await userRes.json();
 								const store = getStore();
 								setStore({ ...store, user: userData });
+								// cargar direcciones del usuario
+								try { await getActions().fetchUserAddresses(); } catch { }
+
 								return { success: true, data: userData };
 							}
 						} catch (userError) {
@@ -243,6 +328,8 @@ const getState = ({ getStore, getActions, setStore }) => {
 					if (!res.ok) throw new Error("No se pudo hidratar sesión");
 					const user = await res.json();
 					setStore({ ...store, user });
+					try { await getActions().fetchUserAddresses(); } catch { }
+
 				} catch (e) {
 					localStorage.removeItem("token");
 					setStore({ ...store, user: null });

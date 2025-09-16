@@ -6,34 +6,48 @@ from typing import Optional
 from sqlalchemy.dialects.postgresql import JSONB
 
 
+
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(60), nullable=False)
     name: Mapped[str] = mapped_column(String(60), nullable=False)
     phone: Mapped[str] = mapped_column(String(40), nullable=True)
+
+    # EXISTENTE (direccion única vieja): podés mantenerla por compatibilidad
     address: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # ➕ NUEVO: DNI (rápido acceso)
+    dni: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+    # ➕ NUEVO: direcciones completas separadas (mismo shape que tus forms)
+    # { name, lastname, dni, country, address, apartment, city, province, postalCode, phone, email }
+    billing_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
+    shipping_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
+
     role: Mapped[str] = mapped_column(String(10), nullable=False, default="user")
     last_login: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     is_premium: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
 
-    
     def serialize(self):
         return {
             'id': self.id,
             'email': self.email,
             'name': self.name,
             'phone': self.phone,
-            'address': self.address,
+            'address': self.address, # legacy
+            'dni': self.dni,
+            'billing_address': self.billing_address or {},
+            'shipping_address': self.shipping_address or {},
             'role': self.role,
             'last_login': self.last_login,
             'is_active': self.is_active,
             'is_premium': self.is_premium,
             'is_admin': self.is_admin,
-            'is_premium': self.is_premium,
         }
+
 
 
 class Category(db.Model):

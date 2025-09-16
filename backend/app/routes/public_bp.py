@@ -93,7 +93,7 @@ def get_products_by_category(category_id):
         return jsonify({'error': 'Error al obtener productos de la categoría: ' + str(e)}), 500
     
 
-@app.route('/api/send-mail', methods=['POST'])
+@public_bp.route('/api/send-mail', methods=['POST'])
 def send_mail():
     data = request.get_json()
     name = data.get("name")
