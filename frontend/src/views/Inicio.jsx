@@ -2,9 +2,11 @@ import React, { useContext, useEffect } from 'react'
 import { Context } from '../js/store/appContext.jsx';
 import { Link } from "react-router-dom";
 import ProductCard from '../components/ProductCard.jsx';
+import { useLocation } from "react-router-dom";
 
 function Inicio() {
     const { store, actions } = useContext(Context);
+    const location = useLocation();
     {/* ====== Sección: Visitános (Tailwind) ====== */ }
     {/*
   Pegá este bloque dentro de tu componente Inicio.jsx.
@@ -57,6 +59,32 @@ function Inicio() {
         });
         return () => observer.disconnect();
     }, []);
+
+    useEffect(() => {
+        const wantsContact =
+            location.state?.scrollTo === "contacto" ||
+            window.location.hash === "#contacto";
+
+        if (!wantsContact) return;
+
+        // Esperar a que todo el layout (imágenes, fuentes) esté más estable
+        const t = setTimeout(() => {
+            const el = document.getElementById("contacto");
+            if (!el) return;
+
+            // ⚡ recalcular header en este momento
+            const header = document.querySelector("header");
+            const headerH = header ? header.offsetHeight : 80;
+
+            // Dar un margen de seguridad extra (por ejemplo 12px)
+            const y = el.getBoundingClientRect().top + window.pageYOffset - headerH - 12;
+
+            window.scrollTo({ top: y, behavior: "smooth" });
+        }, 300); // ⬅️ 300 ms da tiempo a imágenes y fuentes
+
+        return () => clearTimeout(t);
+    }, [location.state]);
+
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -193,7 +221,7 @@ function Inicio() {
     }
   `}</style>
             </section>
-            {/* Categorías (cards con imagen + botón VER) */}
+
             {/* Categorías (cards con imagen + botón VER) */}
             <section className="py-6 md:py-10 fade-in-section" id="categorias-animadas">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -367,7 +395,7 @@ function Inicio() {
                 </div>
             </section>
             {/* seccion visitanos */}
-            <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id='contacto'>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
                     {/* Columna izquierda: texto */}
                     <div className="md:col-span-1 text-center md:text-left">

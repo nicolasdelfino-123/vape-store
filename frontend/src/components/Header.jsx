@@ -1,14 +1,15 @@
 import { useState, useContext, useEffect, useRef } from "react";
 import { Context } from "../js/store/appContext.jsx";
-import { Link } from "react-router-dom";
 import Cart from "../components/Cart.jsx";
 import AccountDropdown from "../components/AccountDropdown.jsx";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Header() {
   const { store, actions } = useContext(Context);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [productsDropdownOpen, setProductsDropdownOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Referencias para el dropdown
   const productsDropdownRef = useRef(null);
@@ -92,6 +93,29 @@ export default function Header() {
     { name: "Accesorios", route: "/categoria/accesorios", icon: "⚙️" },
     { name: "Celulares", route: "/categoria/celulares", icon: "📱" },
   ];
+
+  const goToContact = (e) => {
+    e.preventDefault();
+
+    const doScroll = () => {
+      const el = document.getElementById("contacto");
+      if (!el) return;
+      // Altura del header sticky (medimos por si cambia)
+      const headerH = document.querySelector("header")?.offsetHeight || 80;
+      const y = el.getBoundingClientRect().top + window.pageYOffset - headerH - 8; // un pelín más arriba
+      window.scrollTo({ top: y, behavior: "smooth" });
+    };
+
+    if (window.location.pathname !== "/inicio") {
+      // navegamos al inicio y, tras montar, scrolleamos
+      navigate("/inicio", { state: { scrollTo: "contacto" } });
+    } else {
+      doScroll();
+    }
+
+    setIsMenuOpen(false); // cerrar menú móvil si estaba abierto
+  };
+
 
   return (
     <header
@@ -204,7 +228,13 @@ export default function Header() {
             >
               Mayoristas
             </Link>
-            <a href="/#contacto" className="hover:text-purple-400 transition-colors text-gray-300">Contacto</a>
+            <a
+              href="/inicio#contacto"
+              onClick={goToContact}
+              className="hover:text-purple-400 transition-colors text-gray-300"
+            >
+              Contacto
+            </a>
           </nav>
 
           {/* Desktop Actions */}
@@ -294,13 +324,14 @@ export default function Header() {
               >
                 Mayoristas
               </Link>
-              <Link
-                to="/#contacto"
+              <a
+                href="/inicio#contacto"
+                onClick={goToContact}
                 className="block px-3 py-2 hover:text-purple-400 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
               >
                 Contacto
-              </Link>
+              </a>
+
 
               {/* Mobile: Ingresar solo si NO hay usuario */}
               {store.user ? (
