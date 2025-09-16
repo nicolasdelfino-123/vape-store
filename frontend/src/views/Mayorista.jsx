@@ -32,9 +32,11 @@ export default function Mayorista() {
                 _honey: ""                // honeypot (si lo llenan, se descarta)
             };
 
+            //const res = await fetch( "https://formsubmit.co/ajax/email-del-mauri-aca@gmail.com", eso tengo q poner abajo luego
+            //y despues reeplazarlo por el codigo q me da formsubmit.co como lo hice acá abajo
+
             const res = await fetch(
                 "https://formsubmit.co/ajax/81e70398f5514885c7164c437eaa10f0",
-
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -63,7 +65,7 @@ export default function Mayorista() {
             {/* Texto a la izquierda */}
             <div>
                 <h1 className="text-3xl font-bold mb-6">Solicitud Mayorista</h1>
-                <p className="mb-4 text-gray-700 leading-relaxed">
+                <p className="mb-4 text-gray-700 leading-relaxed text-justify">
                     Usted solicitará una lista mayorista para poder acceder a nuestra extensa lista de productos.
                     Esta solicitud será revisada a la brevedad y será notificado para más información.
                     También puede contactarnos directamente usando los datos de la sección Contacto.
@@ -89,7 +91,7 @@ export default function Mayorista() {
 
                         <input
                             name="name"
-                            placeholder="Nombre"
+                            placeholder="Nombre y Apellido"
                             value={form.name}
                             onChange={handleChange}
                             className="w-full border p-3 rounded"
