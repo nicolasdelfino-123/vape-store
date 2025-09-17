@@ -175,7 +175,7 @@ const ProductDetail = () => {
                             <img
                                 src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
                                 alt={product.name}
-                                className="w-full h-96 object-cover rounded-lg"
+                                className="w-full max-h-[32rem] object-contain rounded-lg bg-gray-100"
                             />
 
                         </div>

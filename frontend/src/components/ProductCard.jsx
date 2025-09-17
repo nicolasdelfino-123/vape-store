@@ -63,17 +63,16 @@ export default function ProductCard({ product }) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Imagen */}
-      <div
-        className={`w-full bg-gray-200 cursor-pointer ${IMAGE_RATIO}`}
-        onClick={handleProductClick}
-      >
+      {/* Imagen (tamaño real, sin recortes ni barras) */}
+      <div onClick={handleProductClick} className="w-full cursor-pointer">
         <img
-          src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
+          src={toAbsUrl(product.image_url) || "/placeholder-product.jpg"}
           alt={product.name || "Producto"}
-          className="h-full w-full object-cover"
+          className="block w-full h-auto"
           loading="lazy"
         />
       </div>
+
 
       {/* Contenido */}
       <div className="p-3 sm:p-4">
