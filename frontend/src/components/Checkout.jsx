@@ -578,7 +578,10 @@ const Checkout = () => {
                                             className="w-12 h-12 object-cover rounded"
                                         />
                                         <div>
-                                            <p className="font-medium text-sm">{item.name}</p>
+                                            <p className="font-medium text-sm">
+                                                {item.name}
+                                                {item.selectedFlavor ? ` (${item.selectedFlavor})` : ""}
+                                            </p>
                                             <p className="text-gray-600 text-sm">Cantidad: {item.quantity}</p>
                                         </div>
                                     </div>
@@ -635,8 +638,8 @@ const Checkout = () => {
                                 onClick={createPreference}
                                 disabled={!isFormValid() || loading}
                                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${isFormValid() && !loading
-                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? 'Procesando...' : 'Continuar al pago'}

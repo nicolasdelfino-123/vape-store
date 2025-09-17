@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Context } from '../js/store/appContext.jsx';
 import { Link } from "react-router-dom";
 import ProductCard from '../components/ProductCard.jsx';
@@ -7,6 +7,8 @@ import { useLocation } from "react-router-dom";
 function Inicio() {
     const { store, actions } = useContext(Context);
     const location = useLocation();
+    const [productSearch, setProductSearch] = useState("");
+
     {/* ====== Sección: Visitános (Tailwind) ====== */ }
     {/*
   Pegá este bloque dentro de tu componente Inicio.jsx.
@@ -366,9 +368,20 @@ function Inicio() {
 
 
             {/* Products Section */}
-            <section id="productos" className="py-8 md:py-16 fade-in-section">
+            <section id="productos" className="py-8 md:py-16 animate-fade-in-scroll">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Productos Destacados</h2>
+                    <div className="mb-8 md:mb-12">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4">Productos Destacados</h2>
+                        <div className="flex flex-col md:flex-row md:items-center md:gap-4 md:justify-start w-full md:w-auto">
+                            <input
+                                type="text"
+                                placeholder="Buscar productos..."
+                                value={productSearch}
+                                onChange={e => setProductSearch(e.target.value)}
+                                className="mb-4 md:mb-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-full md:w-64"
+                            />
+                        </div>
+                    </div>
 
                     {store.loading ? (
                         <div className="text-center py-12">
@@ -377,9 +390,17 @@ function Inicio() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {(store.products || []).slice(0, 12).map((product) => (
-                                <ProductCard key={product.id} product={product} />
-                            ))}
+                            {(store.products || [])
+                                .filter(p => {
+                                    const q = productSearch.toLowerCase();
+                                    return !q || p.name?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q);
+                                })
+                                .slice(0, 12)
+                                .map((product, idx) => (
+                                    <div key={product.id} className="animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                                        <ProductCard product={product} />
+                                    </div>
+                                ))}
                         </div>
                     )}
 
