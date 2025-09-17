@@ -239,10 +239,7 @@ def create_category():
         db.session.rollback()
         return jsonify({'error': f'Error al crear categoría: {str(e)}'}), 500
 
-from flask import current_app, send_from_directory, url_for
-from werkzeug.utils import secure_filename
-import os, uuid
-from PIL import Image  # pip install pillow
+
 
 @admin_bp.route('/upload', methods=['POST'])
 @jwt_required()
@@ -251,33 +248,52 @@ def upload_image():
         return jsonify({'error': 'Acceso denegado.'}), 403
 
     file = request.files.get('image')
-    if not file:
+    if not file or not file.filename:
         return jsonify({'error': 'Falta el archivo "image"'}), 400
 
-    # carpeta destino (configurable)
-    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+    # Carpeta destino ABSOLUTA (si no está configurada, usa /app/uploads)
+    upload_folder = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, 'uploads')
     os.makedirs(upload_folder, exist_ok=True)
 
-    # nombre seguro + UUID
-    orig_name = secure_filename(file.filename or 'image.jpg')
+    # Mantener extensión original
+    orig_name = secure_filename(file.filename)
     _, ext = os.path.splitext(orig_name)
-    new_name = f"{uuid.uuid4().hex}{(ext or '.jpg').lower()}"
+    ext = (ext or '.jpg').lower()  # default .jpg si viene sin extensión
+    new_name = f"{uuid.uuid4().hex}{ext}"
     path = os.path.join(upload_folder, new_name)
 
-    # Opcional: comprimir/optimizar y limitar tamaño (rápido en web)
+    # Optimización por tipo
     try:
-        img = Image.open(file.stream).convert('RGB')
-        img.thumbnail((1600, 1600))  # máx 1600px lado largo
-        img.save(path, format='JPEG', quality=82, optimize=True)
+        # Abrimos con Pillow
+        img = Image.open(file.stream)
+
+        # Reducimos tamaño máximo (lado largo 1600px)
+        img.thumbnail((1600, 1600))
+
+        if ext in ('.jpg', '.jpeg'):
+            # Forzar RGB para JPEG
+            if img.mode not in ('RGB', 'L'):
+                img = img.convert('RGB')
+            img.save(path, format='JPEG', quality=82, optimize=True)
+        elif ext == '.png':
+            # Mantener transparencia si la hay
+            img.save(path, format='PNG', optimize=True)
+        elif ext == '.webp':
+            # WEBP con buena compresión
+            # (si trae alpha, Pillow lo maneja)
+            img.save(path, format='WEBP', quality=82, method=6)
+        else:
+            # Extensión rara: guardamos el stream sin procesar
+            file.stream.seek(0)
+            file.save(path)
     except Exception:
-        # fallback si no es imagen manejable por PIL
-        file.seek(0)
+        # Si Pillow no puede abrir, guardamos el stream crudo
+        file.stream.seek(0)
         file.save(path)
 
-    # URL pública para servir el archivo
-    # Devolvemos ruta relativa tipo /admin/uploads/<file>
-    return jsonify({'url': url_for('admin.get_uploaded_file', filename=new_name)}), 201
-
+    # URL ABSOLUTA (para que el front la use tal cual)
+    url = url_for('admin.get_uploaded_file', filename=new_name, _external=True)
+    return jsonify({'url': url}), 201
 
 @admin_bp.route('/uploads/<path:filename>', methods=['GET'])
 def get_uploaded_file(filename):

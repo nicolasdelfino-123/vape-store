@@ -506,7 +506,7 @@ export default function AdminProducts() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Descripción larga</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
-                            placeholder="(breve, se muestra debajo del precio)"
+                            placeholder="(descripción detallada del producto)"
                             rows={2}
                             maxLength={40000}
                             value={form.short_description || ""}
@@ -516,7 +516,7 @@ export default function AdminProducts() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Descripción corta</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
-                            placeholder="Descripción larga"
+                            placeholder="Descripción breve (se muestra debajo del precio)"
                             value={form.description || ""}
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
                         />
