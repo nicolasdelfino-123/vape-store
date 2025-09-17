@@ -36,6 +36,27 @@ const NAME_TO_SLUG = {
     "Perfumes": "perfumes",
 };
 
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// Normaliza paths viejos
+const normalizeImagePath = (u = "") => {
+    if (!u) return "";
+    // corrige cosas antiguas
+    if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
+    if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+    return u;
+};
+
+// Convierte relativo → absoluto
+const toAbsUrl = (u = "") => {
+    u = normalizeImagePath(u);
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.startsWith("/")) return `${API}${u}`;
+    return `${API}/${u}`;
+};
+
+
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -152,10 +173,11 @@ const ProductDetail = () => {
                         {/* Imagen del producto */}
                         <div>
                             <img
-                                src={product.image_url || '/placeholder-product.jpg'}
+                                src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
                                 alt={product.name}
                                 className="w-full h-96 object-cover rounded-lg"
                             />
+
                         </div>
 
                         {/* Detalles del producto */}

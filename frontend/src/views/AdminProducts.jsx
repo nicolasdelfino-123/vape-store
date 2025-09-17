@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-const API = import.meta.env.VITE_BACKEND_URL
+
 
 // ----- Helpers de categorías -----
 const CATEGORY_NAME_TO_ID = {
@@ -154,6 +154,25 @@ function FlavorPills({ catalog = [], onChange }) {
 }
 
 // arriba, junto a otros useRef/useState:
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// Normaliza paths viejos
+const normalizeImagePath = (u = "") => {
+    if (!u) return "";
+    // corrige cosas antiguas
+    if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
+    if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+    return u;
+};
+
+// Convierte relativo → absoluto
+const toAbsUrl = (u = "") => {
+    u = normalizeImagePath(u);
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.startsWith("/")) return `${API}${u}`;
+    return `${API}/${u}`;
+};
 
 
 
@@ -206,7 +225,7 @@ export default function AdminProducts() {
             const data = await res.json();
             if (!res.ok || !data?.url) throw new Error(data?.error || "No se pudo subir");
             // Seteamos la URL que devuelve el backend en el form
-            setForm((prev) => ({ ...prev, image_url: data.url }));
+            setForm((prev) => ({ ...prev, image_url: normalizeImagePath(data.url) }));
         } catch (e) {
             console.error(e);
             alert("No se pudo subir la imagen");
@@ -235,9 +254,10 @@ export default function AdminProducts() {
             // Si está activado el modo, el stock total se calcula como suma de los activos
             const totalFromFlavors = sumActiveFlavorStock(catalog)
             const finalStock = form.flavor_stock_mode ? totalFromFlavors : Number(form.stock ?? 0)
-
+            const normalizedImageUrl = normalizeImagePath(form.image_url);
             const payload = {
                 ...form,
+                image_url: normalizedImageUrl,   // ← guardás siempre relativo correcto
                 short_description: form.short_description ?? "",
                 flavors: activeFlavors,
                 flavor_enabled: enabled,
@@ -654,12 +674,13 @@ export default function AdminProducts() {
                         {form.image_url && (
                             <div className="mt-2">
                                 <img
-                                    src={form.image_url}
+                                    src={toAbsUrl(form.image_url)}
                                     alt="Preview"
                                     className="w-full max-h-44 object-contain border rounded"
                                 />
                             </div>
                         )}
+
 
 
                         <select

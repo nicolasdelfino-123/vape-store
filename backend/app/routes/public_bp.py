@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 from app import db
 from app.models import Product, Category
+import os
+from flask import send_from_directory, current_app
 
 
 public_bp = Blueprint('public', __name__)
@@ -122,3 +124,9 @@ def send_mail():
         return jsonify({"message": "ok"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+    
+@public_bp.route('/uploads/<path:filename>', methods=['GET'])
+def serve_upload(filename):
+    folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
+    return send_from_directory(folder, filename, max_age=60*60*24*30)  # cache 30 días

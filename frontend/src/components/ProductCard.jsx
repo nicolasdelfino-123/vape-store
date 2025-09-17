@@ -2,6 +2,31 @@ import { useState, useContext } from "react"
 import { Context } from "../js/store/appContext"
 import { useNavigate } from "react-router-dom"
 
+
+// URL base del backend (definila en tu .env como VITE_BACKEND_URL)
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// Normaliza paths viejos
+const normalizeImagePath = (u = "") => {
+  if (!u) return "";
+  // corrige cosas antiguas
+  if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
+  if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+  return u;
+};
+
+// Convierte relativo → absoluto
+const toAbsUrl = (u = "") => {
+  u = normalizeImagePath(u);
+  if (!u) return "";
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith("/")) return `${API}${u}`;
+  return `${API}/${u}`;
+};
+
+
+
+
 export default function ProductCard({ product }) {
   const HIDE_WHEN_NO_STOCK = true
   const IMAGE_RATIO = "aspect-square"
@@ -43,7 +68,7 @@ export default function ProductCard({ product }) {
         onClick={handleProductClick}
       >
         <img
-          src={product.image_url || "/placeholder-product.jpg"}
+          src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
           alt={product.name || "Producto"}
           className="h-full w-full object-cover"
           loading="lazy"

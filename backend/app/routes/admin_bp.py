@@ -11,6 +11,7 @@ from flask import current_app, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 import os, uuid
 from PIL import Image  # pip install pillow
+from flask import url_for
 
 
 
@@ -248,54 +249,59 @@ def upload_image():
         return jsonify({'error': 'Acceso denegado.'}), 403
 
     file = request.files.get('image')
-    if not file or not file.filename:
+    if not file:
         return jsonify({'error': 'Falta el archivo "image"'}), 400
 
-    # Carpeta destino ABSOLUTA (si no está configurada, usa /app/uploads)
-    upload_folder = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, 'uploads')
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
     os.makedirs(upload_folder, exist_ok=True)
 
-    # Mantener extensión original
-    orig_name = secure_filename(file.filename)
-    _, ext = os.path.splitext(orig_name)
-    ext = (ext or '.jpg').lower()  # default .jpg si viene sin extensión
-    new_name = f"{uuid.uuid4().hex}{ext}"
-    path = os.path.join(upload_folder, new_name)
+    # 1) Nombre original saneado (conservamos extensión)
+    orig_name = secure_filename(file.filename or 'imagen.jpg')
+    base, ext = os.path.splitext(orig_name)
+    ext = (ext or '.jpg').lower()
 
-    # Optimización por tipo
+    # 2) Evitar colisiones: si existe, agregamos sufijos -1, -2, ...
+    def unique_name(folder, base, ext):
+        candidate = f"{base}{ext}"
+        i = 1
+        while os.path.exists(os.path.join(folder, candidate)):
+            candidate = f"{base}-{i}{ext}"
+            i += 1
+        return candidate
+
+    save_name = unique_name(upload_folder, base, ext)
+    path = os.path.join(upload_folder, save_name)
+
+    # 3) Optimizar (si es imagen compatible); si falla, guardamos raw
     try:
-        # Abrimos con Pillow
-        img = Image.open(file.stream)
-
-        # Reducimos tamaño máximo (lado largo 1600px)
+        img = Image.open(file.stream)  # no convertimos a RGB si no hace falta
+        # Redimensionar si es muy grande (lado largo máx 1600px)
         img.thumbnail((1600, 1600))
-
-        if ext in ('.jpg', '.jpeg'):
-            # Forzar RGB para JPEG
-            if img.mode not in ('RGB', 'L'):
-                img = img.convert('RGB')
-            img.save(path, format='JPEG', quality=82, optimize=True)
+        # Guardamos en su mismo formato (según extensión)
+        fmt = None
+        if ext in ['.jpg', '.jpeg']:
+            fmt = 'JPEG'
+            img.save(path, format=fmt, quality=82, optimize=True)
         elif ext == '.png':
-            # Mantener transparencia si la hay
-            img.save(path, format='PNG', optimize=True)
+            fmt = 'PNG'
+            img.save(path, format=fmt, optimize=True)
         elif ext == '.webp':
-            # WEBP con buena compresión
-            # (si trae alpha, Pillow lo maneja)
-            img.save(path, format='WEBP', quality=82, method=6)
+            fmt = 'WEBP'
+            img.save(path, format=fmt, quality=82, method=6)
         else:
-            # Extensión rara: guardamos el stream sin procesar
-            file.stream.seek(0)
-            file.save(path)
+            # Formato raro: guardamos sin optimización usando el stream original
+            raise ValueError("Formato no manejado por Pillow")
     except Exception:
-        # Si Pillow no puede abrir, guardamos el stream crudo
-        file.stream.seek(0)
+        # fallback: guardar tal cual vino
+        file.seek(0)
         file.save(path)
 
-    # URL ABSOLUTA (para que el front la use tal cual)
-    url = url_for('admin.get_uploaded_file', filename=new_name, _external=True)
-    return jsonify({'url': url}), 201
+    # 4) Devolver **URL relativa** (sin /admin) => la sirve public_bp
+  
 
-@admin_bp.route('/uploads/<path:filename>', methods=['GET'])
-def get_uploaded_file(filename):
-    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
-    return send_from_directory(upload_folder, filename, max_age=60*60*24*30)  # cache 30 días
+# DESPUÉS (devuelve /public/uploads/lo-que-sea)
+        return jsonify({'url': url_for('public.serve_upload', filename=save_name)}), 201
+
+
+
+
