@@ -168,17 +168,19 @@ const ProductDetail = () => {
                 </Link>
 
 
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="bg-white rounded-lg shadow-lg">
                     <div className="grid md:grid-cols-2 gap-8 p-8">
-                        {/* Imagen del producto */}
-                        <div>
+
+                        {/* Imagen: tamaño real, sin recortes */}
+                        <div className="md:pr-4">
                             <img
                                 src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
                                 alt={product.name}
-                                className="w-full max-h-[32rem] object-contain rounded-lg bg-gray-100"
+                                className="block w-full h-auto rounded-lg bg-gray-100"
+                                loading="lazy"
                             />
-
                         </div>
+
 
                         {/* Detalles del producto */}
                         <div>
