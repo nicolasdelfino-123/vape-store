@@ -59,11 +59,14 @@ function FlavorPills({ catalog = [], onChange }) {
     }
 
     const changeStock = (idx, stock) => {
-        const n = Number(stock)
-        const next = [...catalog]
-        next[idx] = { ...next[idx], stock: Number.isFinite(n) ? n : 0 }
-        ensure(next)
-    }
+        // Forzamos número entero >= 0
+        const nRaw = Number(stock);
+        const n = Number.isFinite(nRaw) ? Math.max(0, Math.floor(nRaw)) : 0;
+        const next = [...catalog];
+        next[idx] = { ...next[idx], stock: n };
+        ensure(next);
+    };
+
 
     const add = () => {
         const t = input.trim()
@@ -115,6 +118,7 @@ function FlavorPills({ catalog = [], onChange }) {
                                         className="w-28 border rounded px-2 py-1 text-right"
                                         type="number"
                                         min={0}
+                                        step={1}
                                         value={f.stock}
                                         onChange={(e) => changeStock(idx, e.target.value)}
                                     />
@@ -246,6 +250,18 @@ export default function AdminProducts() {
         return matchesSearch && matchesCategory
     })
 
+    // 👇 Sincroniza el stock general cuando el modo por sabor está activo
+    useEffect(() => {
+        if (!form) return
+        if (form.flavor_stock_mode) {
+            const total = sumActiveFlavorStock(form.flavor_catalog || [])
+            if (Number(form.stock) !== total) {
+                setForm(prev => ({ ...prev, stock: total }))
+            }
+        }
+    }, [form?.flavor_catalog, form?.flavor_stock_mode])
+
+
     return (
         <div className="p-4 sm:p-6">
             <h1 className="text-2xl font-bold mb-4">Admin Productos</h1>
@@ -270,9 +286,19 @@ export default function AdminProducts() {
                         </option>
                     ))}
                 </select>
-                <button onClick={() => setForm({ category_id: 1, flavor_stock_mode: false })} className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
+                <button
+                    onClick={() => setForm({
+                        category_id: 1,
+                        flavor_stock_mode: false,
+                        flavor_catalog: [],   // 👈 importante: lista vacía para poder agregar sabores
+                        flavors: [],
+                        is_active: true,
+                    })}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700"
+                >
                     Nuevo
                 </button>
+
 
                 {/* Importar JSON */}
                 <button
@@ -372,7 +398,12 @@ export default function AdminProducts() {
                                     </div>
                                 </td>
                                 <td className="p-2 text-center">${p.price}</td>
-                                <td className="p-2 text-center">{p.stock}</td>
+                                <td className="p-2 text-center">
+                                    {form && form.id === p.id && form.flavor_stock_mode
+                                        ? sumActiveFlavorStock(form.flavor_catalog || [])
+                                        : p.stock}
+                                </td>
+
                                 <td className="p-2 text-center">{p.category_name}</td>
                                 <td className="p-2 text-center">
                                     {p.flavor_enabled ? (
@@ -398,22 +429,29 @@ export default function AdminProducts() {
                                 <td className="p-2 text-right">
                                     <button
                                         onClick={() => {
-                                            // Mejora: si no hay flavor_catalog pero sí flavors, los autocompleta
                                             let catalog = Array.isArray(p.flavor_catalog) ? p.flavor_catalog : [];
                                             if ((!catalog || catalog.length === 0) && Array.isArray(p.flavors) && p.flavors.length > 0) {
                                                 catalog = p.flavors.map((n) => ({ name: n, active: true, stock: 0 }));
                                             }
+                                            if (!Array.isArray(catalog)) catalog = []; // 👈 si no hay, lista vacía para poder agregar
+
+                                            const flavorStockMode = Boolean(p?.flavor_stock_mode ?? false);
+                                            const sum = sumActiveFlavorStock(catalog);
+
                                             setForm({
                                                 ...p,
                                                 flavor_catalog: catalog,
                                                 flavor_enabled: p.flavor_enabled ?? (catalog.length > 0),
-                                                flavor_stock_mode: Boolean(p?.flavor_stock_mode ?? false),
+                                                flavor_stock_mode: flavorStockMode,
+                                                stock: flavorStockMode ? sum : (Number.isFinite(Number(p.stock)) ? Number(p.stock) : 0),
                                             });
                                         }}
                                         className="px-3 py-1 border rounded hover:bg-gray-50"
                                     >
                                         Editar
                                     </button>
+
+
 
                                 </td>
                             </tr>
@@ -442,14 +480,14 @@ export default function AdminProducts() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Descripción breve</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
-                            placeholder="(no se usa en la web)"
+                            placeholder="(se muestra debajo del precio)"
                             rows={2}
                             maxLength={200}
                             value={form.short_description || ""}
                             onChange={(e) => setForm({ ...form, short_description: e.target.value })}
                         />
 
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción larga</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
                             placeholder="Descripción"
@@ -478,17 +516,65 @@ export default function AdminProducts() {
 
                         {/* Toggle modo stock por sabor (solo si hay sabores/categoría aplica) */}
                         {shouldShowFlavors(form.category_id) && (
-                            <label className="flex items-center gap-2 mb-2">
-                                <input
-                                    type="checkbox"
-                                    checked={Boolean(form.flavor_stock_mode)}
-                                    onChange={(e) => setForm({ ...form, flavor_stock_mode: e.target.checked })}
-                                />
-                                Usar stock por sabor (recomendado si cada sabor tiene stock propio)
-                            </label>
+                            <>
+                                {/* ÚNICO checkbox de modo por sabor */}
+                                <label className="flex items-center gap-2 mb-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(form.flavor_stock_mode)}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked
+                                            setForm(prev => {
+                                                const safeCatalog = Array.isArray(prev.flavor_catalog) ? prev.flavor_catalog : []
+                                                return {
+                                                    ...prev,
+                                                    flavor_stock_mode: checked,
+                                                    // al activarlo, habilitamos editor y sincronizamos stock
+                                                    flavor_enabled: checked ? true : prev.flavor_enabled,
+                                                    flavor_catalog: safeCatalog, // asegura array para poder agregar sabores
+                                                    stock: checked ? sumActiveFlavorStock(safeCatalog) : prev.stock,
+                                                }
+                                            })
+                                        }}
+                                    />
+                                    Usar stock por sabor (recomendado si cada sabor tiene stock propio)
+                                </label>
+
+                                {/* Editor de sabores: visible SOLO si el modo por sabor está activo */}
+                                {form.flavor_stock_mode && (
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium mb-1">
+                                            Sabores (activar/desactivar y stock)
+                                        </label>
+
+                                        <FlavorPills
+                                            catalog={Array.isArray(form.flavor_catalog)
+                                                ? form.flavor_catalog
+                                                : (form.flavors || []).map((n) => ({ name: n, active: true, stock: 0 }))
+                                            }
+                                            onChange={(next) =>
+                                                setForm(prev => {
+                                                    const activos = next.filter(x => x.active)
+                                                    const total = sumActiveFlavorStock(next)
+                                                    return {
+                                                        ...prev,
+                                                        flavor_catalog: next,
+                                                        flavors: activos.map(x => x.name),
+                                                        stock: prev.flavor_stock_mode ? total : prev.stock,
+                                                    }
+                                                })
+                                            }
+                                        />
+
+                                        <div className="text-xs text-gray-600">
+                                            Total (activos): <strong>{sumActiveFlavorStock(form.flavor_catalog || [])}</strong> unidades
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
-                        {/* Campo de stock general (se oculta si usamos stock por sabor) */}
+                        {/* Stock general: solo visible si NO usamos stock por sabor */}
                         {!form.flavor_stock_mode && (
                             <>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
@@ -496,8 +582,13 @@ export default function AdminProducts() {
                                     className="w-full border rounded px-3 py-2"
                                     placeholder="Stock"
                                     type="number"
-                                    value={form.stock ?? 0}
-                                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                                    min={0}
+                                    step={1}
+                                    value={Number.isFinite(Number(form.stock)) ? form.stock : 0}
+                                    onChange={(e) => {
+                                        const n = Math.max(0, Math.floor(Number(e.target.value) || 0))
+                                        setForm({ ...form, stock: n })
+                                    }}
                                     required
                                 />
                             </>
@@ -537,44 +628,6 @@ export default function AdminProducts() {
                         </select>
 
                         {/* Sabores solo para 1 y 3 */}
-                        {shouldShowFlavors(form.category_id) && (
-                            <>
-                                <label className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={form.flavor_enabled ?? true}
-                                        onChange={(e) => setForm({ ...form, flavor_enabled: e.target.checked })}
-                                    />
-                                    Habilitar selector de sabores
-                                </label>
-
-                                {form.flavor_enabled && (
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium mb-1">
-                                            Sabores (activar/desactivar y stock)
-                                        </label>
-                                        <FlavorPills
-                                            catalog={
-                                                form.flavor_catalog ||
-                                                (form.flavors || []).map((n) => ({ name: n, active: true, stock: 0 }))
-                                            }
-                                            onChange={(next) =>
-                                                setForm({
-                                                    ...form,
-                                                    flavor_catalog: next,
-                                                    flavors: next.filter((x) => x.active).map((x) => x.name),
-                                                })
-                                            }
-                                        />
-                                        {form.flavor_stock_mode && (
-                                            <div className="text-xs text-gray-600">
-                                                Total (activos): <strong>{sumActiveFlavorStock(form.flavor_catalog)}</strong> unidades
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        )}
 
                         <label className="flex items-center gap-2">
                             <input

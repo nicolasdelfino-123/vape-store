@@ -173,11 +173,18 @@ const ProductDetail = () => {
                             </div>
 
                             <div className="mb-6">
-                                <p className="text-sm text-gray-500 mb-2">
-                                    Stock disponible: {product.stock} unidades
-                                </p>
+
                                 <p className="text-sm text-gray-500">Categoría: {product.category_name}</p>
                             </div>
+                            {product.description && (
+                                <div className="mt-3">
+                                    <h3 className="text-sm font-medium text-gray-700 mb-1">Descripción</h3>
+                                    <p className="text-gray-700 whitespace-pre-line">
+                                        {product.description}
+                                    </p>
+                                </div>
+                            )}
+
 
                             {/* Sabor (solo si hay sabores detectados) */}
                             {flavorOptions.length > 0 && (
