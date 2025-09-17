@@ -156,24 +156,6 @@ function FlavorPills({ catalog = [], onChange }) {
 // arriba, junto a otros useRef/useState:
 
 
-const uploadImage = async (file) => {
-    try {
-        const fd = new FormData();
-        fd.append("image", file);
-        const res = await fetch(`${API}/admin/upload`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: fd,
-        });
-        const data = await res.json();
-        if (!res.ok || !data?.url) throw new Error(data?.error || "No se pudo subir");
-        // Seteamos la URL que devuelve el backend en el form
-        setForm((prev) => ({ ...prev, image_url: data.url }));
-    } catch (e) {
-        console.error(e);
-        alert("No se pudo subir la imagen");
-    }
-};
 
 
 // ----- Componente principal -----
@@ -211,6 +193,26 @@ export default function AdminProducts() {
     useEffect(() => {
         fetchAll()
     }, [])
+
+    const uploadImage = async (file) => {
+        try {
+            const fd = new FormData();
+            fd.append("image", file);
+            const res = await fetch(`${API}/admin/upload`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: fd,
+            });
+            const data = await res.json();
+            if (!res.ok || !data?.url) throw new Error(data?.error || "No se pudo subir");
+            // Seteamos la URL que devuelve el backend en el form
+            setForm((prev) => ({ ...prev, image_url: data.url }));
+        } catch (e) {
+            console.error(e);
+            alert("No se pudo subir la imagen");
+        }
+    };
+
 
     const shouldShowFlavors = (categoryId) => [1, 3].includes(Number(categoryId))
 
@@ -392,7 +394,7 @@ export default function AdminProducts() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="p-2 text-left">Producto</th>
-                            <th className="p-2 text-left">Descripción breve</th>
+                            <th className="p-2 text-left">Descripción corta</th>
                             <th className="p-2 text-left">Descripción larga</th>
                             <th className="p-2">Precio</th>
                             <th className="p-2">Stock</th>
@@ -501,20 +503,20 @@ export default function AdminProducts() {
                             required
                         />
 
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción breve</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción larga</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
-                            placeholder="(se muestra debajo del precio)"
+                            placeholder="(breve, se muestra debajo del precio)"
                             rows={2}
-                            maxLength={200}
+                            maxLength={40000}
                             value={form.short_description || ""}
                             onChange={(e) => setForm({ ...form, short_description: e.target.value })}
                         />
 
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción larga</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción corta</label>
                         <textarea
                             className="w-full border rounded px-3 py-2"
-                            placeholder="Descripción"
+                            placeholder="Descripción larga"
                             value={form.description || ""}
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
                         />

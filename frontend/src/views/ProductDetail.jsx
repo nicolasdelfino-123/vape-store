@@ -41,23 +41,23 @@ const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { store, actions } = useContext(Context);
+    const product = store.products?.find((p) => p.id === parseInt(id));
 
     const [quantity, setQuantity] = useState(1);
     const [selectedFlavor, setSelectedFlavor] = useState('');
     const [activeTab, setActiveTab] = useState('desc'); // 'desc' | 'info'
     const [flavorError, setFlavorError] = useState('');
+    const [descExpanded, setDescExpanded] = useState(false);
 
-    // Cargar productos si no están disponibles
+
+
     useEffect(() => {
         if (!store.products || store.products.length === 0) {
-            if (actions && actions.fetchProducts) {
-                actions.fetchProducts();
-            }
+            actions?.fetchProducts?.();
         }
-    }, []); // Solo ejecutar una vez al montar el componente
+    }, []);
 
-    // Buscar el producto en el store (debe estar antes de usarlo)
-    const product = store.products?.find((p) => p.id === parseInt(id));
+
 
     // Calcular opciones de sabor de forma segura
     const flavorOptions = getFlavors(product);
@@ -269,13 +269,44 @@ const ProductDetail = () => {
                                 {/* Contenido de pestañas */}
                                 {activeTab === 'desc' ? (
                                     <div className="pt-4">
-                                        <p className="text-gray-700 whitespace-pre-line">
-                                            {product.short_description || 'Sin descripción.'}
-                                        </p>
+                                        <div className="relative">
+                                            <p
+                                                className={`text-gray-700 whitespace-pre-line`}
+                                                style={
+                                                    descExpanded
+                                                        ? { maxHeight: 'none', overflow: 'visible', display: 'block' }
+                                                        : { maxHeight: '12em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical' }
+                                                }
+                                            >
+                                                {product.short_description || 'Sin descripción.'}
+                                            </p>
+                                            {(product.short_description?.length ?? 0) > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDescExpanded((v) => !v)}
+                                                    className="mt-2 text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
+                                                >
+                                                    {descExpanded ? (
+                                                        <>
+                                                            Ver menos
+                                                            <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            Ver más
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="pt-4 space-y-3">
-                                        {/* Sabores listados en la pestaña de info */}
                                         {getFlavors(product).length > 0 ? (
                                             <div>
                                                 <h4 className="font-medium mb-2">Sabores disponibles</h4>
@@ -290,6 +321,8 @@ const ProductDetail = () => {
                                         )}
                                     </div>
                                 )}
+
+
                             </div>
                         </div>
                     </div>

@@ -72,9 +72,9 @@ class Category(db.Model):
 
 class Product(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(1000), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
-    short_description: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
+    name: Mapped[str] = mapped_column(String(2000), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(40000), nullable=True)
+    short_description: Mapped[Optional[str]] = mapped_column(String(40000), nullable=True)
     price: Mapped[float] = mapped_column(Float, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
