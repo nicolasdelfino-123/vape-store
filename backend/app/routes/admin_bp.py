@@ -7,6 +7,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models import Product, Category, User
+from flask import current_app, send_from_directory, url_for
+from werkzeug.utils import secure_filename
+import os, uuid
+from PIL import Image  # pip install pillow
+
+
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -232,3 +238,48 @@ def create_category():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al crear categoría: {str(e)}'}), 500
+
+from flask import current_app, send_from_directory, url_for
+from werkzeug.utils import secure_filename
+import os, uuid
+from PIL import Image  # pip install pillow
+
+@admin_bp.route('/upload', methods=['POST'])
+@jwt_required()
+def upload_image():
+    if not admin_required():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    file = request.files.get('image')
+    if not file:
+        return jsonify({'error': 'Falta el archivo "image"'}), 400
+
+    # carpeta destino (configurable)
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+    os.makedirs(upload_folder, exist_ok=True)
+
+    # nombre seguro + UUID
+    orig_name = secure_filename(file.filename or 'image.jpg')
+    _, ext = os.path.splitext(orig_name)
+    new_name = f"{uuid.uuid4().hex}{(ext or '.jpg').lower()}"
+    path = os.path.join(upload_folder, new_name)
+
+    # Opcional: comprimir/optimizar y limitar tamaño (rápido en web)
+    try:
+        img = Image.open(file.stream).convert('RGB')
+        img.thumbnail((1600, 1600))  # máx 1600px lado largo
+        img.save(path, format='JPEG', quality=82, optimize=True)
+    except Exception:
+        # fallback si no es imagen manejable por PIL
+        file.seek(0)
+        file.save(path)
+
+    # URL pública para servir el archivo
+    # Devolvemos ruta relativa tipo /admin/uploads/<file>
+    return jsonify({'url': url_for('admin.get_uploaded_file', filename=new_name)}), 201
+
+
+@admin_bp.route('/uploads/<path:filename>', methods=['GET'])
+def get_uploaded_file(filename):
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+    return send_from_directory(upload_folder, filename, max_age=60*60*24*30)  # cache 30 días

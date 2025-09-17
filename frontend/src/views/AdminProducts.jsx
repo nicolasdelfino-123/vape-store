@@ -153,6 +153,29 @@ function FlavorPills({ catalog = [], onChange }) {
     )
 }
 
+// arriba, junto a otros useRef/useState:
+
+
+const uploadImage = async (file) => {
+    try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const res = await fetch(`${API}/admin/upload`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.url) throw new Error(data?.error || "No se pudo subir");
+        // Seteamos la URL que devuelve el backend en el form
+        setForm((prev) => ({ ...prev, image_url: data.url }));
+    } catch (e) {
+        console.error(e);
+        alert("No se pudo subir la imagen");
+    }
+};
+
+
 // ----- Componente principal -----
 export default function AdminProducts() {
     const [products, setProducts] = useState([])
@@ -160,6 +183,7 @@ export default function AdminProducts() {
     const [form, setForm] = useState(null)
     const [q, setQ] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("Todos")
+    const imgInputRef = useRef(null);
 
     // Importación masiva
     const fileInputRef = useRef(null)
@@ -368,8 +392,8 @@ export default function AdminProducts() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="p-2 text-left">Producto</th>
-                            <th className="p-2 text-left">Descripción</th>
                             <th className="p-2 text-left">Descripción breve</th>
+                            <th className="p-2 text-left">Descripción larga</th>
                             <th className="p-2">Precio</th>
                             <th className="p-2">Stock</th>
                             <th className="p-2">Categoría</th>
@@ -594,13 +618,47 @@ export default function AdminProducts() {
                             </>
                         )}
 
-                        <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
-                        <input
-                            className="w-full border rounded px-3 py-2"
-                            placeholder="URL de imagen"
-                            value={form.image_url || ""}
-                            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del producto</label>
+
+                        <div className="flex gap-2">
+                            <input
+                                className="w-full border rounded px-3 py-2"
+                                placeholder="URL de imagen (opcional si subís una)"
+                                value={form.image_url || ""}
+                                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                            />
+
+                            <input
+                                ref={imgInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) uploadImage(f);
+                                    e.target.value = ""; // reset para poder re-subir
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => imgInputRef.current?.click()}
+                                className="px-3 py-2 border rounded hover:bg-gray-50 shrink-0"
+                                title="Subir desde el ordenador"
+                            >
+                                Subir foto
+                            </button>
+                        </div>
+
+                        {form.image_url && (
+                            <div className="mt-2">
+                                <img
+                                    src={form.image_url}
+                                    alt="Preview"
+                                    className="w-full max-h-44 object-contain border rounded"
+                                />
+                            </div>
+                        )}
+
 
                         <select
                             className="w-full border rounded px-3 py-2"

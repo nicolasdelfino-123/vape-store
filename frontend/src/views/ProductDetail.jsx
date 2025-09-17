@@ -270,7 +270,7 @@ const ProductDetail = () => {
                                 {activeTab === 'desc' ? (
                                     <div className="pt-4">
                                         <p className="text-gray-700 whitespace-pre-line">
-                                            {product.short_description || 'Sin descripción breve.'}
+                                            {product.short_description || 'Sin descripción.'}
                                         </p>
                                     </div>
                                 ) : (
