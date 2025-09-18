@@ -300,7 +300,7 @@ def upload_image():
   
 
 # DESPUÉS (devuelve /public/uploads/lo-que-sea)
-        return jsonify({'url': url_for('public.serve_upload', filename=save_name)}), 201
+    return jsonify({'url': url_for('public.serve_upload', filename=save_name)}), 201
 
 
 
