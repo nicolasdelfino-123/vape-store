@@ -63,15 +63,18 @@ export default function ProductCard({ product }) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Imagen */}
-      {/* Imagen (tamaño real, sin recortes ni barras) */}
+      {/* Imagen (compatible con /public/img/<id>), 1:1 sin recortes, lazy + async */}
       <div onClick={handleProductClick} className="w-full cursor-pointer">
         <img
-          src={toAbsUrl(product.image_url) || "/placeholder-product.jpg"}
-          alt={product.name || "Producto"}
+          src={toAbsUrl(product?.image_url) || "/placeholder-product.jpg"}
+          alt={product?.name || "Producto"}
           className="block w-full h-auto"
           loading="lazy"
+          decoding="async"
+          onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
         />
       </div>
+
 
 
       {/* Contenido */}

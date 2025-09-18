@@ -1,8 +1,11 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request,abort, make_response
 from app import db
 from app.models import Product, Category
 import os
 from flask import send_from_directory, current_app
+from app.models import ProductImage
+import hashlib
+
 
 
 public_bp = Blueprint('public', __name__)
@@ -130,3 +133,21 @@ def send_mail():
 def serve_upload(filename):
     folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
     return send_from_directory(folder, filename, max_age=60*60*24*30)  # cache 30 días
+
+
+
+@public_bp.route('/img/<int:image_id>')
+def serve_image(image_id: int):
+    img = ProductImage.query.get(image_id)
+    if not img or not img.bytes:
+        abort(404)
+
+    # ETag basado en digest si existe, sino en hash de bytes
+    etag = img.digest or hashlib.sha256(img.bytes).hexdigest()
+
+    # Respuesta binaria con cabeceras de caché agresivas
+    resp = make_response(img.bytes)
+    resp.headers['Content-Type'] = img.mime_type or 'application/octet-stream'
+    resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable'  # 1 año + immutable
+    resp.headers['ETag'] = etag
+    return resp

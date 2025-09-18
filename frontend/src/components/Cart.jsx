@@ -2,6 +2,25 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Context } from "../js/store/appContext.jsx";
 import { useNavigate, Link } from "react-router-dom";
+// URL base del backend (definila en .env como VITE_BACKEND_URL, sin "/" al final)
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// Normaliza paths viejos
+const normalizeImagePath = (u = "") => {
+  if (!u) return "";
+  if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
+  if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+  return u;
+};
+
+// Convierte relativo → absoluto
+const toAbsUrl = (u = "") => {
+  u = normalizeImagePath(u);
+  if (!u) return "";
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith("/")) return `${API}${u}`;
+  return `${API}/${u}`;
+};
 
 // helper para título robusto
 const getTitle = (it) => {
@@ -57,7 +76,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
   }, [isOpen]);
 
   // Si no está abierto (modal), no pinto nada
-  if (!isOpen && !isRouteMode) return null;
+  if (!controlledOpen && !isRouteMode && controlledOpen !== false) return null;
 
   // Contenido principal del drawer
   const DrawerContent = (
@@ -95,10 +114,14 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
                 <div className="flex gap-3">
                   <img
-                    src={item.image_url || "/placeholder-product.jpg"}
+                    src={toAbsUrl(item?.image_url) || "/placeholder-product.jpg"}
                     alt={getTitle(item)}
                     className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
                   />
+
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -284,30 +307,30 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
     );
   }
 
-  // Drawer con overlay (modo modal): render en portal para NO heredar el transform del Header
+
+  // Drawer con overlay (modo modal): render en portal para NO heredar el transform del Header  
   const modalUI = (
-    <div className="fixed inset-0 z-[100]">
+    <div className={`fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       {/* Overlay */}
       <div
-        className={`absolute inset-0 bg-black/40 transition-opacity ${isOpen ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ease-out ${isOpen ? "opacity-100" : "opacity-0"
           }`}
         onClick={close}
-        style={{ pointerEvents: isOpen ? "auto" : "none" }}
       />
+
       {/* Panel */}
       <aside
         className={`
-          absolute right-0 top-0
-          h-screen w-full max-w-md md:max-w-lg     /* respeta tu ancho actual */
-          bg-white shadow-2xl
-          transform transition-transform duration-200
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
-          flex flex-col text-gray-900
-        `}
+    absolute right-0 top-0
+    h-screen w-full max-w-md md:max-w-lg
+    bg-white shadow-2xl
+    transform transition-transform duration-500 ease-out
+    ${controlledOpen ? "translate-x-0" : "translate-x-full"}
+    flex flex-col text-gray-900
+  `}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-title"
-        style={{ willChange: "transform" }}
       >
         {DrawerContent}
       </aside>

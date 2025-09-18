@@ -6,12 +6,14 @@ Este archivo contendrá las rutas administrativas para CRUD de productos
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from app.models import Product, Category, User
+from app.models import Product, Category, User,ProductImage
 from flask import current_app, send_from_directory, url_for
 from werkzeug.utils import secure_filename
-import os, uuid
-from PIL import Image  # pip install pillow
+from PIL import Image, ImageOps # pip install pillow
 from flask import url_for
+# backend/app/routes/admin_bp.py
+from flask import Blueprint, request, jsonify, current_app, url_for
+import os, io, hashlib, uuid
 
 
 
@@ -242,9 +244,19 @@ def create_category():
 
 
 
+
 @admin_bp.route('/upload', methods=['POST'])
 @jwt_required()
 def upload_image():
+    """
+    Sube una imagen desde Admin, la optimiza y la guarda en la BD (ProductImage).
+    Devuelve la URL interna: /public/img/<id>
+    Campos aceptados (form-data):
+      - image: archivo
+      - product_id (opcional): int para asociar al producto
+      - format (opcional): 'webp' | 'jpeg' (default: webp)
+      - max_size (opcional): lado mayor, int (default: 1600)
+    """
     if not admin_required():
         return jsonify({'error': 'Acceso denegado.'}), 403
 
@@ -252,55 +264,75 @@ def upload_image():
     if not file:
         return jsonify({'error': 'Falta el archivo "image"'}), 400
 
-    upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
-    os.makedirs(upload_folder, exist_ok=True)
+    # Parámetros opcionales
+    target_format = (request.form.get('format') or 'webp').lower()
+    max_size = int(request.form.get('max_size') or 1600)
+    product_id = request.form.get('product_id')
+    product_id = int(product_id) if product_id and product_id.isdigit() else None
 
-    # 1) Nombre original saneado (conservamos extensión)
-    orig_name = secure_filename(file.filename or 'imagen.jpg')
-    base, ext = os.path.splitext(orig_name)
-    ext = (ext or '.jpg').lower()
+    # Leer bytes originales (para digest/ETag)
+    original_bytes = file.read()
+    if not original_bytes:
+        return jsonify({'error': 'Archivo vacío'}), 400
 
-    # 2) Evitar colisiones: si existe, agregamos sufijos -1, -2, ...
-    def unique_name(folder, base, ext):
-        candidate = f"{base}{ext}"
-        i = 1
-        while os.path.exists(os.path.join(folder, candidate)):
-            candidate = f"{base}-{i}{ext}"
-            i += 1
-        return candidate
-
-    save_name = unique_name(upload_folder, base, ext)
-    path = os.path.join(upload_folder, save_name)
-
-    # 3) Optimizar (si es imagen compatible); si falla, guardamos raw
+    # Abrir con Pillow y normalizar orientación
     try:
-        img = Image.open(file.stream)  # no convertimos a RGB si no hace falta
-        # Redimensionar si es muy grande (lado largo máx 1600px)
-        img.thumbnail((1600, 1600))
-        # Guardamos en su mismo formato (según extensión)
-        fmt = None
-        if ext in ['.jpg', '.jpeg']:
-            fmt = 'JPEG'
-            img.save(path, format=fmt, quality=82, optimize=True)
-        elif ext == '.png':
-            fmt = 'PNG'
-            img.save(path, format=fmt, optimize=True)
-        elif ext == '.webp':
-            fmt = 'WEBP'
-            img.save(path, format=fmt, quality=82, method=6)
+        img = Image.open(io.BytesIO(original_bytes))
+        img = ImageOps.exif_transpose(img)
+        # Convertimos a RGB para evitar problemas de modo (p.ej. PNG con alpha → lo podés mantener si querés)
+        if img.mode not in ('RGB', 'RGBA'):
+            img = img.convert('RGB')
+    except Exception as e:
+        return jsonify({'error': f'No se pudo leer la imagen: {str(e)}'}), 400
+
+    # Resize "thumbnail" mantiene aspect ratio
+    img.thumbnail((max_size, max_size))
+
+    # Serializar optimizada a bytes en memoria
+    out = io.BytesIO()
+    if target_format == 'jpeg':
+        # JPEG progresivo
+        img = img.convert('RGB')
+        img.save(out, format='JPEG', quality=82, optimize=True, progressive=True)
+        mime = 'image/jpeg'
+    else:
+        # WEBP (recomendado: más liviano, soporte general actual)
+        # Si hay alpha y querés preservarla:
+        if img.mode == 'RGBA':
+            img.save(out, format='WEBP', quality=80, method=6, lossless=False)
         else:
-            # Formato raro: guardamos sin optimización usando el stream original
-            raise ValueError("Formato no manejado por Pillow")
-    except Exception:
-        # fallback: guardar tal cual vino
-        file.seek(0)
-        file.save(path)
+            img.save(out, format='WEBP', quality=80, method=6)
+        mime = 'image/webp'
 
-    # 4) Devolver **URL relativa** (sin /admin) => la sirve public_bp
-  
+    optimized_bytes = out.getvalue()
+    width, height = img.size
 
-# DESPUÉS (devuelve /public/uploads/lo-que-sea)
-    return jsonify({'url': url_for('public.serve_upload', filename=save_name)}), 201
+    # Digest para ETag/caché y deduplicación opcional
+    digest = hashlib.sha256(optimized_bytes).hexdigest()
+
+    # Guardar en BD
+    db_image = ProductImage(
+        product_id=product_id,
+        mime_type=mime,
+        bytes=optimized_bytes,
+        width=width,
+        height=height,
+        digest=digest
+    )
+    db.session.add(db_image)
+    db.session.commit()
+
+    # URL interna que sirve desde la BD
+    img_url = url_for('public.serve_image', image_id=db_image.id)
+
+    # Si vino product_id y querés asignarla como principal:
+    if product_id:
+        product = Product.query.get(product_id)
+        if product:
+            product.image_url = img_url  # mantiene compatibilidad: front ya usa image_url
+            db.session.commit()
+
+    return jsonify({'url': img_url, 'image_id': db_image.id}), 201
 
 
 

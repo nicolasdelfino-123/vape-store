@@ -172,14 +172,17 @@ const ProductDetail = () => {
                     <div className="grid md:grid-cols-2 gap-8 p-8">
 
                         {/* Imagen: tamaño real, sin recortes */}
+                        {/* Imagen: tamaño real, sin recortes (compatible con /public/img/<id>) */}
                         <div className="md:pr-4">
                             <img
-                                src={toAbsUrl(product.image_url) || '/placeholder-product.jpg'}
-                                alt={product.name}
+                                src={toAbsUrl(product?.image_url) || '/placeholder-product.jpg'}
+                                alt={product?.name || 'Producto'}
+                                decoding="async"
+                                fetchpriority="high"
                                 className="block w-full h-auto rounded-lg bg-gray-100"
-                                loading="lazy"
                             />
                         </div>
+
 
 
                         {/* Detalles del producto */}

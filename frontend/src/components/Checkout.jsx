@@ -10,6 +10,26 @@ const provincesAR = [
     "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
     "Santiago del Estero", "Tierra del Fuego", "Tucumán", "Ciudad Autónoma de Buenos Aires"
 ]
+// URL base del backend (definila en .env como VITE_BACKEND_URL, sin "/" al final)
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// Normaliza paths viejos
+const normalizeImagePath = (u = "") => {
+    if (!u) return "";
+    if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
+    if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+    return u;
+};
+
+// Convierte relativo → absoluto
+const toAbsUrl = (u = "") => {
+    u = normalizeImagePath(u);
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.startsWith("/")) return `${API}${u}`;
+    return `${API}/${u}`;
+};
+
 
 const Checkout = () => {
     const { store, actions } = useContext(Context)
@@ -573,10 +593,14 @@ const Checkout = () => {
                                 <div key={item.id} className="flex items-center justify-between py-2 border-b">
                                     <div className="flex items-center space-x-3">
                                         <img
-                                            src={item.image_url || '/placeholder-product.jpg'}
-                                            alt={item.name}
-                                            className="w-12 h-12 object-cover rounded"
+                                            src={toAbsUrl(item?.image_url) || '/placeholder-product.jpg'}
+                                            alt={item?.name || 'Producto'}
+                                            className="w-12 h-12 object-cover rounded bg-gray-100"
+                                            loading="lazy"
+                                            decoding="async"
+                                            onError={(e) => { e.currentTarget.src = '/placeholder-product.jpg'; }}
                                         />
+
                                         <div>
                                             <p className="font-medium text-sm">
                                                 {item.name}

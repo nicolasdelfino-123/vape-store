@@ -126,6 +126,36 @@ class Product(db.Model):
             'created_at': self.created_at.isoformat(),
         }
 
+
+        # --- Modelo de imagen persistida en BD ---
+class ProductImage(db.Model):
+    __tablename__ = "product_images"
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Relación opcional al producto (puede ser null si subís imágenes antes de crear el producto)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
+
+    # Datos binarios + metadatos
+    mime_type = db.Column(db.String(64), nullable=False)     # p.ej. "image/webp" o "image/jpeg"
+    bytes = db.Column(db.LargeBinary, nullable=False)        # la imagen en sí (optimizada)
+    width = db.Column(db.Integer, nullable=True)
+    height = db.Column(db.Integer, nullable=True)
+
+    # Para cache/ETag y deduplicación opcional
+    digest = db.Column(db.String(64), index=True, nullable=True, unique=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "product_id": self.product_id,
+            "mime_type": self.mime_type,
+            "width": self.width,
+            "height": self.height,
+            "created_at": self.created_at.isoformat()
+        }
+
 class CartItem(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)

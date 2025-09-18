@@ -671,15 +671,20 @@ export default function AdminProducts() {
                             </button>
                         </div>
 
-                        {form.image_url && (
+                        {/* Preview de imagen (compatible con /public/img/<id>), 1:1 sin recortes */}
+                        {form?.image_url && (
                             <div className="mt-2">
                                 <img
                                     src={toAbsUrl(form.image_url)}
                                     alt="Preview"
-                                    className="w-full max-h-44 object-contain border rounded"
+                                    className="block w-full h-auto max-h-44 object-contain border rounded"
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
                                 />
                             </div>
                         )}
+
 
 
 
