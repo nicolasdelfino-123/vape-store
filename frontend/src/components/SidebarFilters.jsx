@@ -18,6 +18,11 @@ export default function SidebarFilters({
     price,                      // {min, max}
     onChangePrice,              // ({min,max}) => void
     className = "",
+    // 👇 NUEVO: fabricantes (opcionales)
+    brandOptions = [],          // [{ key, label, count }]
+    selectedBrands = [],        // ["ignite","elfbar"]
+    onToggleBrand = () => { },
+    onClearBrands = () => { },
 }) {
     const [open, setOpen] = useState(false)
 
@@ -118,6 +123,43 @@ export default function SidebarFilters({
                     </div>
                 </div>
             </div>
+            {/* === Fabricante (dinámico) === */}
+            {brandOptions.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Fabricante</h4>
+
+                    {selectedBrands.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={onClearBrands}
+                            className="text-xs text-purple-600 hover:underline mb-2"
+                            title="Limpiar selección"
+                        >
+                            Limpiar selección
+                        </button>
+                    )}
+
+                    <div className="space-y-2 max-h-56 overflow-auto pr-1 border rounded p-2">
+                        {brandOptions.map(({ key, label, count }) => {
+                            const checked = selectedBrands.includes(key)
+                            return (
+                                <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => onToggleBrand(key)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="flex-1">
+                                        {label} <span className="text-gray-500">({count})</span>
+                                    </span>
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 

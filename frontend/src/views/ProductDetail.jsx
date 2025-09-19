@@ -47,14 +47,23 @@ const normalizeImagePath = (u = "") => {
     return u;
 };
 
-// Convierte relativo → absoluto
+// Debe quedar exactamente así:
+// Debe quedar así en ProductDetail.jsx
 const toAbsUrl = (u = "") => {
     u = normalizeImagePath(u);
     if (!u) return "";
-    if (/^https?:\/\//i.test(u)) return u;
-    if (u.startsWith("/")) return `${API}${u}`;
+    if (/^https?:\/\//i.test(u)) return u;        // URL externa OK
+
+    // Solo assets del backend se sirven con API
+    if (u.startsWith("/public/")) return `${API}${u}`;
+
+    // Rutas del frontend (ej: "/sin_imagen.jpg") se dejan tal cual
+    if (u.startsWith("/")) return u;
+
+    // Relativo raro -> asumimos backend
     return `${API}/${u}`;
 };
+
 
 
 
@@ -171,17 +180,17 @@ const ProductDetail = () => {
                 <div className="bg-white rounded-lg shadow-lg">
                     <div className="grid md:grid-cols-2 gap-8 p-8">
 
-                        {/* Imagen: tamaño real, sin recortes */}
-                        {/* Imagen: tamaño real, sin recortes (compatible con /public/img/<id>) */}
                         <div className="md:pr-4">
                             <img
-                                src={toAbsUrl(product?.image_url) || '/placeholder-product.jpg'}
+                                src={toAbsUrl(product?.image_url) || '/sin_imagen.jpg'}
                                 alt={product?.name || 'Producto'}
                                 decoding="async"
                                 fetchpriority="high"
                                 className="block w-full h-auto rounded-lg bg-gray-100"
+                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }} // 👈 fallback real
                             />
                         </div>
+
 
 
 

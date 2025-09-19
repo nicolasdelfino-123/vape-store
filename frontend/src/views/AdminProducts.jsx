@@ -166,11 +166,19 @@ const normalizeImagePath = (u = "") => {
 };
 
 // Convierte relativo → absoluto
+// Debe quedar exactamente así:
 const toAbsUrl = (u = "") => {
     u = normalizeImagePath(u);
     if (!u) return "";
-    if (/^https?:\/\//i.test(u)) return u;
-    if (u.startsWith("/")) return `${API}${u}`;
+    if (/^https?:\/\//i.test(u)) return u;        // http(s) ya absoluto
+
+    // ✅ SOLO assets del backend (tu server) van con API
+    if (u.startsWith("/public/")) return `${API}${u}`;
+
+    // ✅ Cualquier otro absoluto (p.ej. "/sin_imagen.jpg" en frontend) se deja igual
+    if (u.startsWith("/")) return u;
+
+    // 🧩 Relativo sin barra: si lo usás, asumimos backend
     return `${API}/${u}`;
 };
 
@@ -254,7 +262,15 @@ export default function AdminProducts() {
             // Si está activado el modo, el stock total se calcula como suma de los activos
             const totalFromFlavors = sumActiveFlavorStock(catalog)
             const finalStock = form.flavor_stock_mode ? totalFromFlavors : Number(form.stock ?? 0)
-            const normalizedImageUrl = normalizeImagePath(form.image_url);
+            // 🔒 Sanitiza y evita valores tipo "frutal" que causarían GET /frutal
+            const normalizedImageUrl = (() => {
+                const u = String(form.image_url || "").trim();
+                if (!u) return "";
+                if (/^https?:\/\//i.test(u)) return u;        // URL completa OK
+                if (u.startsWith("/")) return normalizeImagePath(u); // relativo válido → normaliza /public
+                return "";                                     // invalida textos sueltos (evita 404 /frutal)
+            })();
+
             const payload = {
                 ...form,
                 image_url: normalizedImageUrl,   // ← guardás siempre relativo correcto
@@ -339,11 +355,14 @@ export default function AdminProducts() {
                         flavor_catalog: [],   // 👈 importante: lista vacía para poder agregar sabores
                         flavors: [],
                         is_active: true,
+                        // 👇 DEFAULT DE IMAGEN (ruta servida por tu backend)
+                        image_url: "/sin_imagen.jpg",
                     })}
                     className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700"
                 >
                     Nuevo
                 </button>
+
 
 
                 {/* Importar JSON */}
@@ -479,13 +498,19 @@ export default function AdminProducts() {
                                             if ((!catalog || catalog.length === 0) && Array.isArray(p.flavors) && p.flavors.length > 0) {
                                                 catalog = p.flavors.map((n) => ({ name: n, active: true, stock: 0 }));
                                             }
-                                            if (!Array.isArray(catalog)) catalog = []; // 👈 si no hay, lista vacía para poder agregar
+                                            if (!Array.isArray(catalog)) catalog = [];
 
                                             const flavorStockMode = Boolean(p?.flavor_stock_mode ?? false);
                                             const sum = sumActiveFlavorStock(catalog);
 
+                                            // 👇 si no tiene imagen cargada, asignamos default
+                                            const safeImage = (p.image_url && String(p.image_url).trim())
+                                                ? p.image_url
+                                                : "/public/img/sin_imagen.jpg";
+
                                             setForm({
                                                 ...p,
+                                                image_url: safeImage,                    // 👈 default en edición
                                                 flavor_catalog: catalog,
                                                 flavor_enabled: p.flavor_enabled ?? (catalog.length > 0),
                                                 flavor_stock_mode: flavorStockMode,
@@ -496,6 +521,7 @@ export default function AdminProducts() {
                                     >
                                         Editar
                                     </button>
+
 
 
 
@@ -672,18 +698,17 @@ export default function AdminProducts() {
                         </div>
 
                         {/* Preview de imagen (compatible con /public/img/<id>), 1:1 sin recortes */}
-                        {form?.image_url && (
-                            <div className="mt-2">
-                                <img
-                                    src={toAbsUrl(form.image_url)}
-                                    alt="Preview"
-                                    className="block w-full h-auto max-h-44 object-contain border rounded"
-                                    loading="lazy"
-                                    decoding="async"
-                                    onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
-                                />
-                            </div>
-                        )}
+                        <div className="mt-2">
+                            <img
+                                src={toAbsUrl(form.image_url) || `/sin_imagen.jpg`}
+                                alt="Preview"
+                                className="block w-full h-auto max-h-44 object-contain border rounded"
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => { e.currentTarget.src = `/sin_imagen.jpg`; }}
+                            />
+                        </div>
+
 
 
 

@@ -12,6 +12,10 @@ const SLUG_TO_NAME = {
   "celulares": "Celulares",
   "perfumes": "Perfumes",
 }
+// 👇 pega esto cerca de SLUG_TO_NAME
+const normalizeBrand = (b = "") =>
+  String(b).trim().replace(/\s+/g, " ").toLowerCase()
+
 
 export default function ProductGrid({ category, hideFilters = false }) {
   const navigate = useNavigate()
@@ -20,6 +24,9 @@ export default function ProductGrid({ category, hideFilters = false }) {
 
   const [searchTerm, setSearchTerm] = useState("")
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
+  // 👇 NUEVO: selección de marcas
+  const [selectedBrands, setSelectedBrands] = useState([]) // ej: ["ignite","elfbar"]
+
 
   const currentSlug = slug
   const currentCategoryName = category || (currentSlug ? SLUG_TO_NAME[currentSlug] : null)
@@ -31,6 +38,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
   useEffect(() => {
     setSearchTerm("")
     setPriceRange({ min: 0, max: Infinity })
+    setSelectedBrands([]) // reset marcas al cambiar de categoría
     window.scrollTo(0, 0)
   }, [slug, category])
 
@@ -40,6 +48,21 @@ export default function ProductGrid({ category, hideFilters = false }) {
     if (!currentCategoryName) return products
     return products.filter(p => p.category_name === currentCategoryName)
   }, [store.products, currentCategoryName, slug, category, hideFilters])
+
+  // 👇 NUEVO: marcas disponibles con contador
+  const brandOptions = useMemo(() => {
+    const counter = new Map()
+    for (const p of categoryProducts) {
+      if (!p?.brand) continue
+      const key = normalizeBrand(p.brand)
+      if (!key) continue
+      counter.set(key, (counter.get(key) || 0) + 1)
+    }
+    return Array.from(counter.entries())
+      .map(([key, count]) => ({ key, count, label: key.toUpperCase() }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [categoryProducts])
+
 
   const categoryPriceRange = useMemo(() => {
     if (categoryProducts.length === 0) return { min: 0, max: 50000 }
@@ -54,16 +77,24 @@ export default function ProductGrid({ category, hideFilters = false }) {
 
   const filteredProducts = useMemo(() => {
     const q = searchTerm.toLowerCase()
+    const hasBrandFilter = selectedBrands.length > 0
+
     return categoryProducts.filter(product => {
-      const matchesSearch = !q ||
-        product.name?.toLowerCase().includes(q) ||
-        product.brand?.toLowerCase().includes(q)
+      const name = product.name?.toLowerCase() || ""
+      const brandNorm = normalizeBrand(product.brand || "")
+
+      const matchesSearch = !q || name.includes(q) || brandNorm.includes(q)
       const price = Number(product.price) || 0
-      const matchesPrice = price >= priceRange.min &&
+      const matchesPrice =
+        price >= priceRange.min &&
         (priceRange.max === Infinity || price <= priceRange.max)
-      return matchesSearch && matchesPrice
+
+      const matchesBrand = !hasBrandFilter || (brandNorm && selectedBrands.includes(brandNorm))
+
+      return matchesSearch && matchesPrice && matchesBrand
     })
-  }, [categoryProducts, searchTerm, priceRange])
+  }, [categoryProducts, searchTerm, priceRange, selectedBrands])
+
 
   const pageTitle = category || currentCategoryName || "Todos los Productos"
 
@@ -88,6 +119,12 @@ export default function ProductGrid({ category, hideFilters = false }) {
             onSelectCategory={(newSlug) => navigate(`/categoria/${newSlug}`)}
             priceMin={categoryPriceRange.min}
             priceMax={categoryPriceRange.max}
+            // 👇 NUEVO: fabricantes
+            brandOptions={brandOptions}
+            selectedBrands={selectedBrands}
+            onToggleBrand={(key) => setSelectedBrands(prev => prev.includes(key) ? prev.filter(b => b !== key) : [...prev, key])}
+            onClearBrands={() => setSelectedBrands([])}
+
             price={priceRange}
             onChangePrice={(newRange) =>
               setPriceRange({

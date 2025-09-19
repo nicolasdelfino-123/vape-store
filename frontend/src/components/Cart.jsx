@@ -14,13 +14,22 @@ const normalizeImagePath = (u = "") => {
 };
 
 // Convierte relativo → absoluto
+// Debe quedar exactamente así:
 const toAbsUrl = (u = "") => {
   u = normalizeImagePath(u);
   if (!u) return "";
-  if (/^https?:\/\//i.test(u)) return u;
-  if (u.startsWith("/")) return `${API}${u}`;
+  if (/^https?:\/\//i.test(u)) return u;        // http(s) ya absoluto
+
+  // ✅ SOLO assets del backend (tu server) van con API
+  if (u.startsWith("/public/")) return `${API}${u}`;
+
+  // ✅ Cualquier otro absoluto (p.ej. "/sin_imagen.jpg" en frontend) se deja igual
+  if (u.startsWith("/")) return u;
+
+  // 🧩 Relativo sin barra: si lo usás, asumimos backend
   return `${API}/${u}`;
 };
+
 
 // helper para título robusto
 const getTitle = (it) => {
@@ -114,12 +123,12 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
                 <div className="flex gap-3">
                   <img
-                    src={toAbsUrl(item?.image_url) || "/placeholder-product.jpg"}
+                    src={toAbsUrl(item?.image_url) || "/sin_imagen.jpg"}
                     alt={getTitle(item)}
                     className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
                     loading="lazy"
                     decoding="async"
-                    onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
+                    onError={(e) => { e.currentTarget.src = "/sin_imagen.jpg"; }}
                   />
 
                   <div className="flex-1">

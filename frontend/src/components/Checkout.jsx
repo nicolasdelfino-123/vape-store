@@ -25,11 +25,17 @@ const normalizeImagePath = (u = "") => {
 const toAbsUrl = (u = "") => {
     u = normalizeImagePath(u);
     if (!u) return "";
-    if (/^https?:\/\//i.test(u)) return u;
-    if (u.startsWith("/")) return `${API}${u}`;
+    if (/^https?:\/\//i.test(u)) return u;        // URL externa OK
+
+    // Solo assets del backend se sirven con API
+    if (u.startsWith("/public/")) return `${API}${u}`;
+
+    // Rutas del frontend (ej: "/sin_imagen.jpg") se dejan tal cual
+    if (u.startsWith("/")) return u;
+
+    // Relativo raro -> asumimos backend
     return `${API}/${u}`;
 };
-
 
 const Checkout = () => {
     const { store, actions } = useContext(Context)
@@ -593,13 +599,22 @@ const Checkout = () => {
                                 <div key={item.id} className="flex items-center justify-between py-2 border-b">
                                     <div className="flex items-center space-x-3">
                                         <img
-                                            src={toAbsUrl(item?.image_url) || '/placeholder-product.jpg'}
-                                            alt={item?.name || 'Producto'}
-                                            className="w-12 h-12 object-cover rounded bg-gray-100"
+                                            src={toAbsUrl(item?.image_url) || "/sin_imagen.jpg"}
+                                            alt={item?.name || "Producto"}
+                                            width={48}
+                                            height={48}
+                                            className="w-12 h-12 rounded bg-gray-100 object-contain"  // contén la imagen, no la recortes
                                             loading="lazy"
                                             decoding="async"
-                                            onError={(e) => { e.currentTarget.src = '/placeholder-product.jpg'; }}
+                                            onError={(e) => {
+                                                // evita loop si la default fallara (raro) y asegura fallback
+                                                if (!e.currentTarget.src.endsWith("/sin_imagen.jpg")) {
+                                                    e.currentTarget.onerror = null
+                                                    e.currentTarget.src = "/sin_imagen.jpg"
+                                                }
+                                            }}
                                         />
+
 
                                         <div>
                                             <p className="font-medium text-sm">

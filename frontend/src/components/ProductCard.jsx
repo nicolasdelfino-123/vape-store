@@ -16,11 +16,19 @@ const normalizeImagePath = (u = "") => {
 };
 
 // Convierte relativo → absoluto
+// Debe quedar exactamente así:
 const toAbsUrl = (u = "") => {
   u = normalizeImagePath(u);
   if (!u) return "";
-  if (/^https?:\/\//i.test(u)) return u;
-  if (u.startsWith("/")) return `${API}${u}`;
+  if (/^https?:\/\//i.test(u)) return u;        // http(s) ya absoluto
+
+  // ✅ SOLO assets del backend (tu server) van con API
+  if (u.startsWith("/public/")) return `${API}${u}`;
+
+  // ✅ Cualquier otro absoluto (p.ej. "/sin_imagen.jpg" en frontend) se deja igual
+  if (u.startsWith("/")) return u;
+
+  // 🧩 Relativo sin barra: si lo usás, asumimos backend
   return `${API}/${u}`;
 };
 
@@ -66,12 +74,12 @@ export default function ProductCard({ product }) {
       {/* Imagen (compatible con /public/img/<id>), 1:1 sin recortes, lazy + async */}
       <div onClick={handleProductClick} className="w-full cursor-pointer">
         <img
-          src={toAbsUrl(product?.image_url) || "/placeholder-product.jpg"}
+          src={toAbsUrl(product?.image_url) || "/sin_imagen.jpg"}
           alt={product?.name || "Producto"}
           className="block w-full h-auto"
           loading="lazy"
           decoding="async"
-          onError={(e) => { e.currentTarget.src = "/placeholder-product.jpg"; }}
+          onError={(e) => { e.currentTarget.src = "/sin_imagen.jpg"; }}
         />
       </div>
 
