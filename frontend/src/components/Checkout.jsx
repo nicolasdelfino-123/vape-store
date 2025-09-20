@@ -21,21 +21,21 @@ const normalizeImagePath = (u = "") => {
     return u;
 };
 
-// Convierte relativo → absoluto
+// ⬇️ Reemplazar COMPLETO por este bloque
 const toAbsUrl = (u = "") => {
     u = normalizeImagePath(u);
     if (!u) return "";
-    if (/^https?:\/\//i.test(u)) return u;        // URL externa OK
+    if (/^https?:\/\//i.test(u)) return u;          // URL externa OK
+    if (u.startsWith("/public/")) return `${API}${u}`; // asset del backend
+    if (u.startsWith("/")) return u;                // asset del frontend (ej: /sin_imagen.jpg)
 
-    // Solo assets del backend se sirven con API
-    if (u.startsWith("/public/")) return `${API}${u}`;
+    // 🔧 NUEVO: si es solo el nombre del archivo (sin "/"), trátalo como asset del frontend
+    if (!u.includes("/")) return `/${u}`;
 
-    // Rutas del frontend (ej: "/sin_imagen.jpg") se dejan tal cual
-    if (u.startsWith("/")) return u;
-
-    // Relativo raro -> asumimos backend
+    // Relativo raro con carpeta -> asumimos backend
     return `${API}/${u}`;
 };
+
 
 const Checkout = () => {
     const { store, actions } = useContext(Context)
