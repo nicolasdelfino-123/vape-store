@@ -119,9 +119,11 @@ function FlavorPills({ catalog = [], onChange }) {
                                         type="number"
                                         min={0}
                                         step={1}
+                                        {...noSpin}
                                         value={f.stock}
                                         onChange={(e) => changeStock(idx, e.target.value)}
                                     />
+
                                 </td>
                                 <td className="p-2 text-right">
                                     <button
@@ -188,6 +190,13 @@ const uniqPush = (arr = [], url = "") => {
     return Array.from(set);
 };
 
+// Evita que el número cambie con la rueda del mouse o flechas ↑ ↓
+const noSpin = {
+    onWheel: (e) => e.currentTarget.blur(),
+    onKeyDown: (e) => {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
+    },
+};
 
 
 
@@ -295,14 +304,17 @@ export default function AdminProducts() {
             const { image_urls, ...cleanForm } = form;
             const payload = {
                 ...cleanForm,
-                image_url: normalizedImageUrl,   // ← guardás siempre relativo correcto
+                price: Number(form.price) || 0,        // 👈 fuerza número
+                puffs: form.puffs === "" ? null : Number(form.puffs), // opcional: null si vacío
+                image_url: normalizedImageUrl,
                 short_description: form.short_description ?? "",
                 flavors: activeFlavors,
                 flavor_enabled: enabled,
-                flavor_catalog: catalog, // guardamos el catálogo completo con stock
-                stock: finalStock, // stock total coherente
-                flavor_stock_mode: Boolean(form.flavor_stock_mode), // flag para front/backend
+                flavor_catalog: catalog,
+                stock: finalStock,
+                flavor_stock_mode: Boolean(form.flavor_stock_mode),
             }
+
 
             const res = await fetch(url, {
                 method,
@@ -380,6 +392,7 @@ export default function AdminProducts() {
                         // 👇 DEFAULT DE IMAGEN (ruta servida por tu backend)
                         image_url: "/sin_imagen.jpg",
                         image_urls: [],
+                        puffs: "", // 👈 nuevo campo editable
                     })}
                     className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700"
                 >
@@ -605,10 +618,35 @@ export default function AdminProducts() {
                             placeholder="Precio"
                             type="number"
                             step="0.01"
-                            value={form.price || ""}
-                            onChange={(e) => setForm({ ...form, price: e.target.value })}
+                            inputMode="decimal"
+                            {...noSpin}
+                            value={form.price ?? ""}
+                            onChange={(e) => setForm({ ...form, price: e.target.value })} // guardamos string tal cual
                             required
                         />
+
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Puffs (caladas)</label>
+                        <input
+                            className="w-full border rounded px-3 py-2"
+                            placeholder="Ej: 10000"
+                            type="number"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            pattern="\d*"
+                            {...noSpin}
+                            value={form.puffs === "" || form.puffs === null || form.puffs === undefined ? "" : form.puffs}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                // mantené lo que escribe el usuario; sólo normalizamos a entero si hay número
+                                setForm(prev => ({
+                                    ...prev,
+                                    puffs: v === "" ? "" : Math.max(0, Math.floor(Number(v))),
+                                }));
+                            }}
+                        />
+
+
 
                         {/* Toggle modo stock por sabor (solo si hay sabores/categoría aplica) */}
                         {shouldShowFlavors(form.category_id) && (
@@ -680,6 +718,7 @@ export default function AdminProducts() {
                                     type="number"
                                     min={0}
                                     step={1}
+                                    {...noSpin}
                                     value={Number.isFinite(Number(form.stock)) ? form.stock : 0}
                                     onChange={(e) => {
                                         const n = Math.max(0, Math.floor(Number(e.target.value) || 0))
@@ -687,6 +726,7 @@ export default function AdminProducts() {
                                     }}
                                     required
                                 />
+
                             </>
                         )}
 

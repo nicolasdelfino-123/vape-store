@@ -16,6 +16,11 @@ const SLUG_TO_NAME = {
 const normalizeBrand = (b = "") =>
   String(b).trim().replace(/\s+/g, " ").toLowerCase()
 
+// normaliza "Aloe   Grape ICE" -> "aloe grape ice"
+const normalizeFlavor = (s = "") =>
+  String(s).trim().replace(/\s+/g, " ").toLowerCase()
+
+
 
 export default function ProductGrid({ category, hideFilters = false }) {
   const navigate = useNavigate()
@@ -26,6 +31,9 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
   // 👇 NUEVO: selección de marcas
   const [selectedBrands, setSelectedBrands] = useState([]) // ej: ["ignite","elfbar"]
+  const [selectedPuffs, setSelectedPuffs] = useState([])      // ej: [8000, 10000]
+  const [selectedFlavors, setSelectedFlavors] = useState([])  // ej: ["Menta","Frutilla"]
+
 
 
   const currentSlug = slug
@@ -40,6 +48,8 @@ export default function ProductGrid({ category, hideFilters = false }) {
     setPriceRange({ min: 0, max: Infinity })
     setSelectedBrands([]) // reset marcas al cambiar de categoría
     window.scrollTo(0, 0)
+    setSelectedPuffs([])       // 👈 agrega
+    setSelectedFlavors([])     // 👈 agrega
   }, [slug, category])
 
   const categoryProducts = useMemo(() => {
@@ -62,6 +72,40 @@ export default function ProductGrid({ category, hideFilters = false }) {
       .map(([key, count]) => ({ key, count, label: key.toUpperCase() }))
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [categoryProducts])
+
+  // Opciones de Puffs (conteo por valor exacto)
+  const puffsOptions = useMemo(() => {
+    const counter = new Map()
+    for (const p of categoryProducts) {
+      const v = Number(p?.puffs)
+      if (!Number.isFinite(v) || v <= 0) continue
+      counter.set(v, (counter.get(v) || 0) + 1)
+    }
+    return Array.from(counter.entries())
+      .map(([value, count]) => ({ value, count, label: `${value}` }))
+      .sort((a, b) => a.value - b.value)
+  }, [categoryProducts])
+
+  // Opciones de Sabores (strings)
+  // Opciones de Sabores (agrupadas por clave normalizada)
+  const flavorOptions = useMemo(() => {
+    const map = new Map(); // key = normalizeFlavor, value = { value, label, count }
+    for (const p of categoryProducts) {
+      const arr = Array.isArray(p?.flavors) ? p.flavors : [];
+      for (const fRaw of arr) {
+        const key = normalizeFlavor(fRaw);
+        if (!key) continue;
+        const prev = map.get(key);
+        if (prev) {
+          prev.count += 1;
+        } else {
+          map.set(key, { value: key, label: String(fRaw).trim(), count: 1 });
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [categoryProducts]);
+
 
 
   const categoryPriceRange = useMemo(() => {
@@ -90,10 +134,25 @@ export default function ProductGrid({ category, hideFilters = false }) {
         (priceRange.max === Infinity || price <= priceRange.max)
 
       const matchesBrand = !hasBrandFilter || (brandNorm && selectedBrands.includes(brandNorm))
+      // Filtro por Puffs (si hay checks, el producto debe tener uno de ellos)
+      const matchesPuffs = selectedPuffs.length === 0
+        ? true
+        : (Number(product.puffs) > 0 && selectedPuffs.includes(Number(product.puffs)))
 
-      return matchesSearch && matchesPrice && matchesBrand
+      // Filtro por Sabores (si hay checks, al menos un sabor debe coincidir)
+      // Filtro por Sabores (si hay checks, al menos un sabor coincida normalizado)
+      const matchesFlavors =
+        selectedFlavors.length === 0
+          ? true
+          : (Array.isArray(product.flavors) &&
+            product.flavors.some(f => selectedFlavors.includes(normalizeFlavor(f))));
+
+
+      return matchesSearch && matchesPrice && matchesBrand && matchesPuffs && matchesFlavors
+
     })
-  }, [categoryProducts, searchTerm, priceRange, selectedBrands])
+  }, [categoryProducts, searchTerm, priceRange, selectedBrands, selectedPuffs, selectedFlavors]);
+
 
 
   const pageTitle = category || currentCategoryName || "Todos los Productos"
@@ -125,6 +184,18 @@ export default function ProductGrid({ category, hideFilters = false }) {
             onToggleBrand={(key) => setSelectedBrands(prev => prev.includes(key) ? prev.filter(b => b !== key) : [...prev, key])}
             onClearBrands={() => setSelectedBrands([])}
 
+            // 👇 NUEVO: Puffs
+            puffsOptions={puffsOptions}
+            selectedPuffs={selectedPuffs}
+            onTogglePuffs={(v) => setSelectedPuffs(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])}
+            onClearPuffs={() => setSelectedPuffs([])}
+
+            // 👇 NUEVO: Sabores
+            flavorOptions={flavorOptions}
+            selectedFlavors={selectedFlavors}
+            onToggleFlavor={(v) => setSelectedFlavors(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])}
+            onClearFlavors={() => setSelectedFlavors([])}
+
             price={priceRange}
             onChangePrice={(newRange) =>
               setPriceRange({
@@ -134,7 +205,6 @@ export default function ProductGrid({ category, hideFilters = false }) {
             }
           />
         )}
-
         {/* Contenido */}
         <div className={hideFilters ? "w-full" : "flex-1"}>
           {!hideFilters && (

@@ -10,29 +10,53 @@ const CATEGORIES = [
     { id: 6, name: "Perfumes", slug: "perfumes" },
 ]
 
+// normalizador simple (lowercase + sin tildes + colapsa espacios)
+const norm = (s = "") =>
+    String(s)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ")
+
 export default function SidebarFilters({
     currentCategorySlug,
-    onSelectCategory,           // (slug) => void
+    onSelectCategory,
+
+    // Precio
     priceMin = 0,
     priceMax = 50000,
     price,                      // {min, max}
-    onChangePrice,              // ({min,max}) => void
+    onChangePrice,
+
     className = "",
-    // 👇 NUEVO: fabricantes (opcionales)
+
+    // Fabricantes
     brandOptions = [],          // [{ key, label, count }]
     selectedBrands = [],        // ["ignite","elfbar"]
     onToggleBrand = () => { },
     onClearBrands = () => { },
+
+    // Puffs
+    puffsOptions = [],          // [{ value, label, count }]
+    selectedPuffs = [],
+    onTogglePuffs = () => { },
+    onClearPuffs = () => { },
+
+    // Sabores
+    flavorOptions = [],         // [{ value, label, count }]
+    selectedFlavors = [],       // ["aloe grape ice", ...] (normalizados desde ProductGrid)
+    onToggleFlavor = () => { },
+    onClearFlavors = () => { },
 }) {
     const [open, setOpen] = useState(false)
+    const [flavorSearch, setFlavorSearch] = useState("")
 
-    // valores seguros
     const p = useMemo(() => ({
         min: Math.max(priceMin, Math.min(price?.min ?? priceMin, priceMax)),
         max: Math.min(priceMax, Math.max(price?.max ?? priceMax, priceMin)),
     }), [priceMin, priceMax, price])
 
-    // handlers con CLAMP para que min <= max y max >= min
     const setMin = (val) => {
         const v = Math.max(priceMin, Math.min(Number(val), p.max))
         onChangePrice?.({ min: v, max: p.max })
@@ -42,13 +66,27 @@ export default function SidebarFilters({
         onChangePrice?.({ min: p.min, max: v })
     }
 
+    // Filtrado local de la lista de sabores según el buscador
+    const filteredFlavorOptions = useMemo(() => {
+        const list = Array.isArray(flavorOptions) ? flavorOptions : []
+        const q = norm(flavorSearch)
+        if (!q) return list
+        const tokens = q.split(" ").filter(Boolean)
+        return list.filter(({ value, label }) => {
+            const haystack = norm(label || value)
+            return tokens.every(t => haystack.includes(t))
+        })
+    }, [flavorOptions, flavorSearch])
+
+    // ⚠️ sin h-full (rompe sticky); nada de overflow aquí
     const body = (
-        <div className="w-64 max-w-[80vw] bg-white h-full border-r p-4 space-y-6">
+        <div className="w-64 max-w-[80vw] bg-white border-r p-4 space-y-6">
             <div className="md:hidden flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold">Filtros</h3>
                 <button onClick={() => setOpen(false)} className="px-3 py-1 border rounded">Cerrar</button>
             </div>
 
+            {/* Categorías */}
             <div>
                 <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Categorías</h4>
                 <ul className="space-y-2">
@@ -68,6 +106,7 @@ export default function SidebarFilters({
                 </ul>
             </div>
 
+            {/* Precio */}
             <div>
                 <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Filtrar por precio</h4>
 
@@ -102,7 +141,6 @@ export default function SidebarFilters({
                         />
                     </div>
 
-                    {/* inputs numéricos por si el usuario quiere teclear */}
                     <div className="flex gap-2">
                         <input
                             type="number"
@@ -123,7 +161,8 @@ export default function SidebarFilters({
                     </div>
                 </div>
             </div>
-            {/* === Fabricante (dinámico) === */}
+
+            {/* Fabricante */}
             {brandOptions.length > 0 && (
                 <div>
                     <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Fabricante</h4>
@@ -160,12 +199,101 @@ export default function SidebarFilters({
                 </div>
             )}
 
+            {/* Puffs */}
+            {puffsOptions.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Puffs</h4>
+
+                    {selectedPuffs.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={onClearPuffs}
+                            className="text-xs text-purple-600 hover:underline mb-2"
+                            title="Limpiar selección"
+                        >
+                            Limpiar selección
+                        </button>
+                    )}
+
+                    <div className="space-y-2 max-h-56 overflow-auto pr-1 border rounded p-2">
+                        {puffsOptions.map(({ value, label, count }) => {
+                            const checked = selectedPuffs.includes(value)
+                            return (
+                                <label key={value} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => onTogglePuffs(value)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="flex-1">
+                                        {label} puffs <span className="text-gray-500">({count})</span>
+                                    </span>
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Sabores */}
+            {flavorOptions.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Sabores</h4>
+
+                    <div className="flex items-center justify-between mb-2">
+                        {selectedFlavors.length > 0 ? (
+                            <button
+                                type="button"
+                                onClick={onClearFlavors}
+                                className="text-xs text-purple-600 hover:underline"
+                                title="Limpiar selección"
+                            >
+                                Limpiar selección
+                            </button>
+                        ) : <span className="text-xs text-gray-500">Seleccioná uno o más</span>}
+                    </div>
+
+                    {/* 🔎 Buscador local de sabores */}
+                    <div className="mb-2">
+                        <input
+                            type="text"
+                            value={flavorSearch}
+                            onChange={(e) => setFlavorSearch(e.target.value)}
+                            placeholder="Buscar sabor..."
+                            className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-2 max-h-56 overflow-auto pr-1 border rounded p-2">
+                        {filteredFlavorOptions.length === 0 && (
+                            <div className="text-xs text-gray-500 px-1">Sin resultados</div>
+                        )}
+                        {filteredFlavorOptions.map(({ value, label, count }) => {
+                            const checked = selectedFlavors.includes(value)
+                            return (
+                                <label key={value} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => onToggleFlavor(value)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="flex-1">
+                                        {label} <span className="text-gray-500">({count})</span>
+                                    </span>
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     )
 
     return (
         <aside className={className}>
-            {/* Botón hamburguesa solo en mobile */}
+            {/* Botón hamburguesa (mobile) */}
             <div className="md:hidden mb-3">
                 <button
                     onClick={() => setOpen(true)}
@@ -176,14 +304,20 @@ export default function SidebarFilters({
                 </button>
             </div>
 
-            {/* Lateral fijo en desktop */}
-            <div className="hidden md:block sticky top-4">{body}</div>
+            {/* Desktop: sticky + propia barra de scroll */}
+            <div className="hidden md:block">
+                <div className="md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-auto">
+                    {body}
+                </div>
+            </div>
 
-            {/* Drawer en mobile */}
+            {/* Drawer mobile (scroll interno) */}
             {open && (
                 <div className="fixed inset-0 z-50 md:hidden">
                     <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-                    <div className="absolute left-0 top-0 h-full">{body}</div>
+                    <div className="absolute left-0 top-0 h-full overflow-auto">
+                        {body}
+                    </div>
                 </div>
             )}
         </aside>

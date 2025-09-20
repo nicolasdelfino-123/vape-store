@@ -96,6 +96,7 @@ def create_product():
             # catálogo completo + modo
             flavor_catalog=catalog,
             flavor_stock_mode=flavor_stock_mode,
+            puffs=(int(data['puffs']) if str(data.get('puffs','')).strip().isdigit() else None),
         )
 
         db.session.add(product)
@@ -129,6 +130,11 @@ def update_product(product_id):
             product.category_id = int(data['category_id'])
         if 'is_active' in data:
             product.is_active = bool(data['is_active'])
+            # 👇 NUEVO: puffs (caladas)
+        if 'puffs' in data:
+            v = str(data.get('puffs','')).strip()
+            product.puffs = int(v) if v.isdigit() else None
+
 
         # ===== NUEVO: catálogo y modo =====
         if ('flavor_catalog' in data) or ('flavor_stock_mode' in data) or ('flavor_enabled' in data) or ('flavors' in data):

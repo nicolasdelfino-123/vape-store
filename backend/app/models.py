@@ -152,7 +152,7 @@ class Product(db.Model):
             'volume_ml': self.volume_ml,
             'created_at': self.created_at.isoformat(),
         }
-    # 👆👆👆 HASTA ACÁ, DENTRO DE LA CLASE 👆👆👆
+  
 
 
         # --- Modelo de imagen persistida en BD ---
