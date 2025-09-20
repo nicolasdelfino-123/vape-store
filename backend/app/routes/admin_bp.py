@@ -173,24 +173,27 @@ def update_product(product_id):
 @admin_bp.route('/products/<int:product_id>', methods=['DELETE'])
 @jwt_required()
 def delete_product(product_id):
-    """Eliminar un producto (soft delete - marcar como inactivo)"""
     if not admin_required():
-        return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador.'}), 403
-    
+        return jsonify({'error': 'Acceso denegado.'}), 403
     try:
         product = Product.query.get(product_id)
         if not product:
             return jsonify({'error': 'Producto no encontrado'}), 404
-        
-        # Soft delete - marcar como inactivo
-        product.is_active = False
+
+        hard = str(request.args.get('hard', '')).lower() in ('1','true','yes')
+
+        if hard:
+            # Con ON DELETE CASCADE, al borrar el product se borran sus imágenes
+            db.session.delete(product)
+        else:
+            product.is_active = False  # comportamiento anterior (soft delete)
+
         db.session.commit()
-        
-        return jsonify({'message': 'Producto eliminado exitosamente'}), 200
-        
+        return jsonify({'message': 'Producto eliminado'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al eliminar producto: {str(e)}'}), 500
+
 
 
 @admin_bp.route('/products', methods=['GET'])
@@ -325,11 +328,14 @@ def upload_image():
     # URL interna que sirve desde la BD
     img_url = url_for('public.serve_image', image_id=db_image.id)
 
-    # Si vino product_id y querés asignarla como principal:
+# Si vino product_id, asociamos la imagen y, SOLO si no hay principal o si el admin lo pide,
+# la dejamos como principal (no pisamos siempre).
     if product_id:
         product = Product.query.get(product_id)
         if product:
-            product.image_url = img_url  # mantiene compatibilidad: front ya usa image_url
+            set_as_main = (request.form.get('as_main') in ('1', 'true', 'yes')) or not product.image_url
+            if set_as_main:
+                product.image_url = img_url
             db.session.commit()
 
     return jsonify({'url': img_url, 'image_id': db_image.id}), 201

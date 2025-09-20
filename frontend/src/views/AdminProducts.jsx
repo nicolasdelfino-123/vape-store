@@ -182,6 +182,12 @@ const toAbsUrl = (u = "") => {
     return `${API}/${u}`;
 };
 
+const uniqPush = (arr = [], url = "") => {
+    const u = normalizeImagePath(url);
+    const set = new Set([...(arr || []), u]);
+    return Array.from(set);
+};
+
 
 
 
@@ -192,7 +198,10 @@ export default function AdminProducts() {
     const [form, setForm] = useState(null)
     const [q, setQ] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("Todos")
-    const imgInputRef = useRef(null);
+    // antes: const imgInputRef = useRef(null);
+    const mainImgInputRef = useRef(null);
+    const galImgInputRef = useRef(null);
+
 
     // Importación masiva
     const fileInputRef = useRef(null)
@@ -221,10 +230,13 @@ export default function AdminProducts() {
         fetchAll()
     }, [])
 
-    const uploadImage = async (file) => {
+    const uploadImage = async (file, { asMain = false } = {}) => {
         try {
             const fd = new FormData();
             fd.append("image", file);
+            if (form?.id) fd.append("product_id", String(form.id)); // asocia a producto
+            if (asMain) fd.append("as_main", "1");                   // marcar como principal en backend
+
             const res = await fetch(`${API}/admin/upload`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
@@ -232,13 +244,23 @@ export default function AdminProducts() {
             });
             const data = await res.json();
             if (!res.ok || !data?.url) throw new Error(data?.error || "No se pudo subir");
-            // Seteamos la URL que devuelve el backend en el form
-            setForm((prev) => ({ ...prev, image_url: normalizeImagePath(data.url) }));
+
+            // Refresca estado local: suma a galería y opcionalmente setea principal
+            setForm((prev) => {
+                if (!prev) return prev;
+                const u = normalizeImagePath(data.url);
+                return {
+                    ...prev,
+                    image_url: (asMain || !prev.image_url) ? u : prev.image_url,
+                    image_urls: uniqPush(prev.image_urls, u),
+                };
+            });
         } catch (e) {
             console.error(e);
             alert("No se pudo subir la imagen");
         }
     };
+
 
 
     const shouldShowFlavors = (categoryId) => [1, 3].includes(Number(categoryId))
@@ -270,9 +292,9 @@ export default function AdminProducts() {
                 if (u.startsWith("/")) return normalizeImagePath(u); // relativo válido → normaliza /public
                 return "";                                     // invalida textos sueltos (evita 404 /frutal)
             })();
-
+            const { image_urls, ...cleanForm } = form;
             const payload = {
-                ...form,
+                ...cleanForm,
                 image_url: normalizedImageUrl,   // ← guardás siempre relativo correcto
                 short_description: form.short_description ?? "",
                 flavors: activeFlavors,
@@ -357,6 +379,7 @@ export default function AdminProducts() {
                         is_active: true,
                         // 👇 DEFAULT DE IMAGEN (ruta servida por tu backend)
                         image_url: "/sin_imagen.jpg",
+                        image_urls: [],
                     })}
                     className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700"
                 >
@@ -511,6 +534,7 @@ export default function AdminProducts() {
                                             setForm({
                                                 ...p,
                                                 image_url: safeImage,                    // 👈 default en edición
+                                                image_urls: Array.isArray(p.image_urls) ? p.image_urls : (safeImage ? [safeImage] : []),
                                                 flavor_catalog: catalog,
                                                 flavor_enabled: p.flavor_enabled ?? (catalog.length > 0),
                                                 flavor_stock_mode: flavorStockMode,
@@ -676,26 +700,49 @@ export default function AdminProducts() {
                                 onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                             />
 
+                            {/* Subir PRINCIPAL */}
                             <input
-                                ref={imgInputRef}
+                                ref={mainImgInputRef}
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];
-                                    if (f) uploadImage(f);
-                                    e.target.value = ""; // reset para poder re-subir
+                                    if (f) uploadImage(f, { asMain: true });
+                                    e.target.value = "";
                                 }}
                             />
                             <button
                                 type="button"
-                                onClick={() => imgInputRef.current?.click()}
+                                onClick={() => mainImgInputRef.current?.click()}
                                 className="px-3 py-2 border rounded hover:bg-gray-50 shrink-0"
-                                title="Subir desde el ordenador"
+                                title="Subir como principal"
                             >
-                                Subir foto
+                                Subir principal
+                            </button>
+
+                            {/* Agregar a GALERÍA */}
+                            <input
+                                ref={galImgInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) uploadImage(f, { asMain: false });
+                                    e.target.value = "";
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => galImgInputRef.current?.click()}
+                                className="px-3 py-2 border rounded hover:bg-gray-50 shrink-0"
+                                title="Agregar a galería"
+                            >
+                                Agregar foto
                             </button>
                         </div>
+
 
                         {/* Preview de imagen (compatible con /public/img/<id>), 1:1 sin recortes */}
                         <div className="mt-2">
@@ -709,6 +756,30 @@ export default function AdminProducts() {
                             />
                         </div>
 
+                        {Array.isArray(form.image_urls) && form.image_urls.length > 0 && (
+                            <div className="mt-2">
+                                <div className="text-xs text-gray-600 mb-1">Galería (clic para principal)</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {form.image_urls.map((u, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setForm((prev) => ({ ...prev, image_url: u }))}
+                                            className={`border rounded p-0.5 ${form.image_url === u ? "ring-2 ring-purple-500" : ""}`}
+                                            title="Hacer principal"
+                                        >
+                                            <img
+                                                src={toAbsUrl(u)}
+                                                className="w-16 h-16 object-contain"
+                                                alt=""
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.src = `/sin_imagen.jpg`; }}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
 
 

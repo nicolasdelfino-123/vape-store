@@ -82,15 +82,11 @@ class Product(db.Model):
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
 
-    # EXISTENTE: lista simple de sabores visibles (strings)
     flavors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True, default=list)
     flavor_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=True, default=False)
-
-    # NUEVO: catálogo completo de sabores con stock por sabor
-    flavor_catalog: Mapped[Optional[list[dict]]] = mapped_column(JSONB, nullable=True, default=list)  # [{name, active, stock}]
+    flavor_catalog: Mapped[Optional[list[dict]]] = mapped_column(JSONB, nullable=True, default=list)
     flavor_stock_mode: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
 
-    # Campos adicionales
     puffs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -102,22 +98,53 @@ class Product(db.Model):
     cart_items: Mapped[list["CartItem"]] = relationship("CartItem", back_populates="product")
     order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="product")
 
+    # 👇👇👇 AGREGA DESDE ACÁ (con sangría dentro de la clase) 👇👇👇
     def serialize(self):
+        # Armar lista de URLs de imágenes (principal + asociadas)
+        image_urls = []
+        if self.image_url:
+            image_urls.append(self.image_url)
+
+        try:
+            # Traer IDs de imágenes vinculadas al producto
+            rows = (
+                db.session.query(ProductImage.id)
+                .filter_by(product_id=self.id)
+                .order_by(ProductImage.id.asc())
+                .all()
+            )
+            for (img_id,) in rows:
+                url = f"/public/img/{img_id}"
+                if url not in image_urls:
+                    image_urls.append(url)
+        except Exception:
+            pass  # si no hay app context o algo similar
+
+        # Casts defensivos
+        try:
+            price_val = float(self.price) if self.price is not None else 0.0
+        except Exception:
+            price_val = 0.0
+        try:
+            stock_val = int(self.stock or 0)
+        except Exception:
+            stock_val = 0
+
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'short_description': self.short_description,
-            'price': self.price,
-            'stock': self.stock,
-            'image_url': self.image_url,
+            'price': price_val,
+            'stock': stock_val,
+            'image_url': self.image_url,          # principal (compat)
+            'image_urls': image_urls,             # todas las fotos
             'brand': self.brand,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,
             'flavors': self.flavors or [],
             'flavor_enabled': self.flavor_enabled,
-            # NUEVO: exponemos al front
             'flavor_catalog': self.flavor_catalog or [],
             'flavor_stock_mode': self.flavor_stock_mode,
             'puffs': self.puffs,
@@ -125,15 +152,22 @@ class Product(db.Model):
             'volume_ml': self.volume_ml,
             'created_at': self.created_at.isoformat(),
         }
+    # 👆👆👆 HASTA ACÁ, DENTRO DE LA CLASE 👆👆👆
 
 
         # --- Modelo de imagen persistida en BD ---
 class ProductImage(db.Model):
     __tablename__ = "product_images"
+    __table_args__ = (db.Index('ix_product_images_product_id', 'product_id'),)
 
     id = db.Column(db.Integer, primary_key=True)
     # Relación opcional al producto (puede ser null si subís imágenes antes de crear el producto)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
+    product_id = db.Column(
+    db.Integer,
+    db.ForeignKey('product.id', ondelete='CASCADE'),
+    nullable=True
+)
+
 
     # Datos binarios + metadatos
     mime_type = db.Column(db.String(64), nullable=False)     # p.ej. "image/webp" o "image/jpeg"

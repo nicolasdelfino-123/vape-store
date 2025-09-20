@@ -79,6 +79,20 @@ const ProductDetail = () => {
     const [flavorError, setFlavorError] = useState('');
     const [descExpanded, setDescExpanded] = useState(false);
 
+    // Galería (usa image_urls si vienen; si no, cae a image_url o placeholder)
+    const gallery = Array.isArray(product?.image_urls) && product.image_urls.length
+        ? product.image_urls
+        : (product?.image_url ? [product.image_url] : ['/sin_imagen.jpg']);
+
+    const [activeImg, setActiveImg] = useState(gallery[0]);
+
+    useEffect(() => {
+        // cuando cambia el producto, resetea la activa
+        setActiveImg(gallery[0]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [product?.id]);
+
+
 
 
     useEffect(() => {
@@ -182,14 +196,37 @@ const ProductDetail = () => {
 
                         <div className="md:pr-4">
                             <img
-                                src={toAbsUrl(product?.image_url) || '/sin_imagen.jpg'}
+                                src={toAbsUrl(activeImg) || '/sin_imagen.jpg'}
                                 alt={product?.name || 'Producto'}
                                 decoding="async"
                                 fetchpriority="high"
                                 className="block w-full h-auto rounded-lg bg-gray-100"
-                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }} // 👈 fallback real
+                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }}
                             />
+
+                            {gallery.length > 1 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {gallery.map((u, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => setActiveImg(u)}
+                                            className={`border rounded p-0.5 ${activeImg === u ? 'ring-2 ring-purple-500' : ''}`}
+                                            title="Ver imagen"
+                                        >
+                                            <img
+                                                src={toAbsUrl(u)}
+                                                alt=""
+                                                className="w-16 h-16 object-contain"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+
 
 
 
