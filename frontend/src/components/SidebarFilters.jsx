@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Menu } from "lucide-react"
+import { Menu, X } from "lucide-react"
 
 const CATEGORIES = [
     { id: 1, name: "Vapes Desechables", slug: "vapes-desechables" },
@@ -78,6 +78,87 @@ export default function SidebarFilters({
         })
     }, [flavorOptions, flavorSearch])
 
+    // Calcular si hay filtros activos
+    const hasActiveFilters = useMemo(() => {
+        return selectedBrands.length > 0 ||
+            selectedPuffs.length > 0 ||
+            selectedFlavors.length > 0 ||
+            (price?.min && price.min > priceMin) ||
+            (price?.max && price.max < priceMax)
+    }, [selectedBrands, selectedPuffs, selectedFlavors, price, priceMin, priceMax])
+
+    // Generar etiquetas de filtros activos
+    const getActiveFilterTags = () => {
+        const tags = []
+
+        // Marcas
+        selectedBrands.forEach(brandKey => {
+            const brand = brandOptions.find(b => b.key === brandKey)
+            if (brand) {
+                tags.push({
+                    type: 'brand',
+                    key: brandKey,
+                    label: `Marca: ${brand.label}`,
+                    onRemove: () => onToggleBrand(brandKey)
+                })
+            }
+        })
+
+        // Puffs
+        selectedPuffs.forEach(puffValue => {
+            tags.push({
+                type: 'puff',
+                key: puffValue,
+                label: `${puffValue} puffs`,
+                onRemove: () => onTogglePuffs(puffValue)
+            })
+        })
+
+        // Sabores
+        selectedFlavors.forEach(flavorValue => {
+            const flavor = flavorOptions.find(f => f.value === flavorValue)
+            if (flavor) {
+                tags.push({
+                    type: 'flavor',
+                    key: flavorValue,
+                    label: `Sabor: ${flavor.label}`,
+                    onRemove: () => onToggleFlavor(flavorValue)
+                })
+            }
+        })
+
+        // Precio
+        if ((price?.min && price.min > priceMin) || (price?.max && price.max < priceMax)) {
+            const isCustomMin = price?.min && price.min > priceMin
+            const isCustomMax = price?.max && price.max < priceMax
+
+            let priceLabel = "Precio: "
+            if (isCustomMin && isCustomMax) {
+                priceLabel += `$${price.min.toLocaleString("es-AR")} - $${price.max.toLocaleString("es-AR")}`
+            } else if (isCustomMin) {
+                priceLabel += `Desde $${price.min.toLocaleString("es-AR")}`
+            } else if (isCustomMax) {
+                priceLabel += `Hasta $${price.max.toLocaleString("es-AR")}`
+            }
+
+            tags.push({
+                type: 'price',
+                key: 'price',
+                label: priceLabel,
+                onRemove: () => onChangePrice?.({ min: priceMin, max: priceMax })
+            })
+        }
+
+        return tags
+    }
+
+    const clearAllFilters = () => {
+        onClearBrands()
+        onClearPuffs()
+        onClearFlavors()
+        onChangePrice?.({ min: priceMin, max: priceMax })
+    }
+
     // ⚠️ sin h-full (rompe sticky); nada de overflow aquí
     const body = (
         <div className="w-64 max-w-[80vw] bg-white border-r p-4 space-y-6">
@@ -85,6 +166,39 @@ export default function SidebarFilters({
                 <h3 className="text-lg font-semibold">Filtros</h3>
                 <button onClick={() => setOpen(false)} className="px-3 py-1 border rounded">Cerrar</button>
             </div>
+
+            {/* Etiquetas de filtros activos */}
+            {hasActiveFilters && (
+                <div className="border-b pb-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700">Filtros activos</h4>
+                        <button
+                            onClick={clearAllFilters}
+                            className="text-xs text-purple-600 hover:text-purple-800 underline"
+                        >
+                            Limpiar todos
+                        </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {getActiveFilterTags().map((tag) => (
+                            <div
+                                key={`${tag.type}-${tag.key}`}
+                                className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm border"
+                            >
+                                <span className="max-w-[120px] truncate">{tag.label}</span>
+                                <button
+                                    onClick={tag.onRemove}
+                                    className="text-gray-500 hover:text-gray-700 flex-shrink-0"
+                                    title="Remover filtro"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Categorías */}
             <div>
@@ -200,24 +314,42 @@ export default function SidebarFilters({
             )}
 
             {/* Puffs */}
-            {puffsOptions.map(({ value, label, count }) => {
-                const numeric = Number(value)
-                const checked = selectedPuffs.includes(numeric)
-                return (
-                    <label key={numeric} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => onTogglePuffs(numeric)}
-                            className="rounded border-gray-300"
-                        />
-                        <span className="flex-1">
-                            {label} puffs <span className="text-gray-500">({count})</span>
-                        </span>
-                    </label>
-                )
-            })}
+            {puffsOptions.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Puffs</h4>
 
+                    {selectedPuffs.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={onClearPuffs}
+                            className="text-xs text-purple-600 hover:underline mb-2"
+                            title="Limpiar selección"
+                        >
+                            Limpiar selección
+                        </button>
+                    )}
+
+                    <div className="space-y-2 max-h-56 overflow-auto pr-1 border rounded p-2">
+                        {puffsOptions.map(({ value, label, count }) => {
+                            const numeric = Number(value)
+                            const checked = selectedPuffs.includes(numeric)
+                            return (
+                                <label key={numeric} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => onTogglePuffs(numeric)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="flex-1">
+                                        {label} puffs <span className="text-gray-500">({count})</span>
+                                    </span>
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Sabores */}
             {flavorOptions.length > 0 && (
@@ -300,6 +432,11 @@ export default function SidebarFilters({
                     >
                         <Menu size={18} />
                         Filtros
+                        {hasActiveFilters && (
+                            <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                {getActiveFilterTags().length}
+                            </span>
+                        )}
                     </button>
                 </div>
 
