@@ -7,9 +7,8 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_mail import Mail
 from dotenv import load_dotenv
-from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
-
 load_dotenv()
+from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 
 # Instancias que se inicializan más adelante
 db = SQLAlchemy()
@@ -48,6 +47,10 @@ def create_app():
     jwt.init_app(app)
     migrate.init_app(app, db, compare_type=True)
     mail.init_app(app)
+    print("MAIL_USER:", app.config.get("MAIL_USERNAME"))
+    print("MAIL_PASS_LEN:", len(str(app.config.get("MAIL_PASSWORD") or "")))
+    print("MAIL_DEFAULT_SENDER:", app.config.get("MAIL_DEFAULT_SENDER"))
+
 
     # Creamos carpeta de base de datos si no existe
     db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'mydatabase.db')

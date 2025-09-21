@@ -6,7 +6,7 @@ load_dotenv()
 
 
 class Config:
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or "fallback-secret-key"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Configuración de email
@@ -33,7 +33,7 @@ class Config:
     # Configuración base de PostgreSQL
     @staticmethod
     def get_database_uri():
-        return os.getenv("DATABASE_URL")
+        return os.getenv("SQLALCHEMY_DATABASE_URI")
     
     
 class DevelopmentConfig(Config):

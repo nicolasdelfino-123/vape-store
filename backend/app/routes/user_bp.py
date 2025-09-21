@@ -5,6 +5,7 @@ from app import db, bcrypt, mail
 from app.models import User, Product, CartItem, Order, OrderItem
 from datetime import timedelta
 import secrets
+import os
 
 
 user_bp = Blueprint('user', __name__)
@@ -541,7 +542,7 @@ def forgot_password():
         )
         
         # Crear URL del frontend para reset password
-        frontend_url = "http://localhost:5174"  # URL del frontend
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")  # URL del frontend
         reset_url = f"{frontend_url}/reset-password/{reset_token}"
         
         msg.html = """

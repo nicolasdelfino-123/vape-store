@@ -40,7 +40,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 				if (!token) return null;
 
 				try {
-					const res = await fetch(`${backendUrl}/me/address`, {
+					const res = await fetch(`${backendUrl}/user/address`, {
 						headers: { "Authorization": `Bearer ${token}` }
 					});
 					if (!res.ok) throw new Error("No se pudo obtener direcciones");
