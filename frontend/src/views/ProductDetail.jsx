@@ -64,9 +64,6 @@ const toAbsUrl = (u = "") => {
     return `${API}/${u}`;
 };
 
-
-
-
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -86,22 +83,22 @@ const ProductDetail = () => {
 
     const [activeImg, setActiveImg] = useState(gallery[0]);
 
+    // 🔥 NUEVO: Scroll hacia arriba al montar el componente
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id]); // Se ejecuta cada vez que cambia el ID del producto
+
     useEffect(() => {
         // cuando cambia el producto, resetea la activa
         setActiveImg(gallery[0]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [product?.id]);
 
-
-
-
     useEffect(() => {
         if (!store.products || store.products.length === 0) {
             actions?.fetchProducts?.();
         }
     }, []);
-
-
 
     // Calcular opciones de sabor de forma segura
     const flavorOptions = getFlavors(product);
@@ -148,12 +145,12 @@ const ProductDetail = () => {
         // Si no, navega SIEMPRE a /products (nunca a inicio)
         navigate('/products');
     };
+
     // Destino de "Volver": categoría si existe, sino /products
     const backHref =
         (product?.category_name && NAME_TO_SLUG[product.category_name.trim()])
             ? `/categoria/${NAME_TO_SLUG[product.category_name.trim()]}`
             : '/products';
-
 
     if (!product) {
         return (
@@ -189,7 +186,6 @@ const ProductDetail = () => {
                     </svg>
                     Volver
                 </Link>
-
 
                 <div className="bg-white rounded-lg shadow-lg">
                     <div className="grid md:grid-cols-2 gap-8 p-8">
@@ -227,10 +223,6 @@ const ProductDetail = () => {
                             )}
                         </div>
 
-
-
-
-
                         {/* Detalles del producto */}
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
@@ -246,9 +238,9 @@ const ProductDetail = () => {
                             </div>
 
                             <div className="mb-6">
-
                                 <p className="text-sm text-gray-500">Categoría: {product.category_name}</p>
                             </div>
+
                             {product.description && (
                                 <div className="mt-3">
                                     <h3 className="text-sm font-medium text-gray-700 mb-1">Descripción</h3>
@@ -257,7 +249,6 @@ const ProductDetail = () => {
                                     </p>
                                 </div>
                             )}
-
 
                             {/* Sabor (solo si hay sabores detectados) */}
                             {flavorOptions.length > 0 && (
@@ -394,8 +385,6 @@ const ProductDetail = () => {
                                         )}
                                     </div>
                                 )}
-
-
                             </div>
                         </div>
                     </div>

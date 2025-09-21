@@ -200,41 +200,24 @@ export default function SidebarFilters({
             )}
 
             {/* Puffs */}
-            {puffsOptions.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Puffs</h4>
+            {puffsOptions.map(({ value, label, count }) => {
+                const numeric = Number(value)
+                const checked = selectedPuffs.includes(numeric)
+                return (
+                    <label key={numeric} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => onTogglePuffs(numeric)}
+                            className="rounded border-gray-300"
+                        />
+                        <span className="flex-1">
+                            {label} puffs <span className="text-gray-500">({count})</span>
+                        </span>
+                    </label>
+                )
+            })}
 
-                    {selectedPuffs.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={onClearPuffs}
-                            className="text-xs text-purple-600 hover:underline mb-2"
-                            title="Limpiar selección"
-                        >
-                            Limpiar selección
-                        </button>
-                    )}
-
-                    <div className="space-y-2 max-h-56 overflow-auto pr-1 border rounded p-2">
-                        {puffsOptions.map(({ value, label, count }) => {
-                            const checked = selectedPuffs.includes(value)
-                            return (
-                                <label key={value} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={() => onTogglePuffs(value)}
-                                        className="rounded border-gray-300"
-                                    />
-                                    <span className="flex-1">
-                                        {label} puffs <span className="text-gray-500">({count})</span>
-                                    </span>
-                                </label>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
 
             {/* Sabores */}
             {flavorOptions.length > 0 && (

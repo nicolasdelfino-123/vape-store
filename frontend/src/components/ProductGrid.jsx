@@ -1,8 +1,25 @@
-import { useState, useEffect, useContext, useMemo } from "react"
+import { useState, useEffect, useContext, useMemo, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Context } from "../js/store/appContext"
 import ProductCard from "./ProductCard.jsx"
 import SidebarFilters from "./SidebarFilters"
+import Modal from "./Modal.jsx"
+
+// --- Persistencia ligera en sessionStorage ---
+const GRID_STATE_KEY = "productGridState"; // base
+
+const readGridState = (key) => {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
+const writeGridState = (key, state) => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(state));
+  } catch { }
+};
 
 const SLUG_TO_NAME = {
   "vapes-desechables": "Vapes Desechables",
@@ -12,6 +29,7 @@ const SLUG_TO_NAME = {
   "celulares": "Celulares",
   "perfumes": "Perfumes",
 }
+
 // 👇 pega esto cerca de SLUG_TO_NAME
 const normalizeBrand = (b = "") =>
   String(b).trim().replace(/\s+/g, " ").toLowerCase()
@@ -19,8 +37,6 @@ const normalizeBrand = (b = "") =>
 // normaliza "Aloe   Grape ICE" -> "aloe grape ice"
 const normalizeFlavor = (s = "") =>
   String(s).trim().replace(/\s+/g, " ").toLowerCase()
-
-
 
 export default function ProductGrid({ category, hideFilters = false }) {
   const navigate = useNavigate()
@@ -33,8 +49,18 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const [selectedBrands, setSelectedBrands] = useState([]) // ej: ["ignite","elfbar"]
   const [selectedPuffs, setSelectedPuffs] = useState([])      // ej: [8000, 10000]
   const [selectedFlavors, setSelectedFlavors] = useState([])  // ej: ["Menta","Frutilla"]
+  // 👉 Modal para avisar selección de sabor
+  const [modalOpen, setModalOpen] = useState(false)
 
+  // Clave única por slug/categoría
+  const storageKey = useMemo(
+    () => `${GRID_STATE_KEY}:${slug || "all"}`,
+    [slug]
+  );
 
+  // Para evitar que el efecto de "reset" pise la restauración
+  const restoredRef = useRef(false);
+  const isInitialMount = useRef(true);
 
   const currentSlug = slug
   const currentCategoryName = category || (currentSlug ? SLUG_TO_NAME[currentSlug] : null)
@@ -43,14 +69,46 @@ export default function ProductGrid({ category, hideFilters = false }) {
     if (actions?.fetchProducts) actions.fetchProducts()
   }, [])
 
+  // 1) Restaurar filtros guardados (si existen) - SOLO AL MONTAR
   useEffect(() => {
-    setSearchTerm("")
-    setPriceRange({ min: 0, max: Infinity })
-    setSelectedBrands([]) // reset marcas al cambiar de categoría
-    window.scrollTo(0, 0)
-    setSelectedPuffs([])       // 👈 agrega
-    setSelectedFlavors([])     // 👈 agrega
-  }, [slug, category])
+    if (!isInitialMount.current) return;
+
+    const saved = readGridState(storageKey);
+    if (saved) {
+      setSearchTerm(saved.searchTerm ?? "");
+      const pr = saved.priceRange ?? { min: 0, max: Infinity };
+      setPriceRange({
+        min: Number.isFinite(pr.min) ? pr.min : 0,
+        max: Number.isFinite(pr.max) ? pr.max : Infinity,
+      });
+      setSelectedBrands(saved.selectedBrands ?? []);
+      setSelectedPuffs(saved.selectedPuffs ?? []);
+      setSelectedFlavors(saved.selectedFlavors ?? []);
+      restoredRef.current = true; // marcamos que restauramos
+    }
+    isInitialMount.current = false;
+  }, [storageKey]);
+
+  // 2) Efecto para cambios de categoría/slug (solo reset si NO hay estado guardado)
+  useEffect(() => {
+    if (isInitialMount.current || restoredRef.current) {
+      // Si es el primer mount o ya restauramos, no hacer reset
+      if (restoredRef.current) {
+        restoredRef.current = false; // limpiamos el flag
+      }
+      return;
+    }
+
+    // Solo hacer reset si no hay estado guardado para esta categoría
+    const saved = readGridState(storageKey);
+    if (!saved) {
+      setSearchTerm("");
+      setPriceRange({ min: 0, max: Infinity });
+      setSelectedBrands([]);
+      setSelectedPuffs([]);
+      setSelectedFlavors([]);
+    }
+  }, [slug, category, storageKey]);
 
   const categoryProducts = useMemo(() => {
     const products = store.products || []
@@ -106,18 +164,12 @@ export default function ProductGrid({ category, hideFilters = false }) {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [categoryProducts]);
 
-
-
   const categoryPriceRange = useMemo(() => {
     if (categoryProducts.length === 0) return { min: 0, max: 50000 }
     const prices = categoryProducts.map(p => Number(p.price) || 0).filter(p => p > 0)
     if (prices.length === 0) return { min: 0, max: 50000 }
     return { min: 0, max: Math.max(...prices) }
   }, [categoryProducts])
-
-  useEffect(() => {
-    setPriceRange({ min: 0, max: Infinity })
-  }, [currentSlug])
 
   const filteredProducts = useMemo(() => {
     const q = searchTerm.toLowerCase()
@@ -147,13 +199,89 @@ export default function ProductGrid({ category, hideFilters = false }) {
           : (Array.isArray(product.flavors) &&
             product.flavors.some(f => selectedFlavors.includes(normalizeFlavor(f))));
 
-
       return matchesSearch && matchesPrice && matchesBrand && matchesPuffs && matchesFlavors
-
     })
   }, [categoryProducts, searchTerm, priceRange, selectedBrands, selectedPuffs, selectedFlavors]);
 
+  // 3) Restaurar scroll guardado (luego de renderizar la grilla)
+  useEffect(() => {
+    const saved = readGridState(storageKey);
+    const y = saved?.scrollY ?? 0;
+    if (y > 0) {
+      // Esperamos al próximo frame para asegurar que el DOM esté listo
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [storageKey, filteredProducts.length]);
 
+  // 4) Guardar estado constantemente (no solo al desmontar)
+  useEffect(() => {
+    if (isInitialMount.current) return; // No guardar en el primer render
+
+    const timeoutId = setTimeout(() => {
+      const pr = {
+        min: Number.isFinite(priceRange?.min) ? priceRange.min : 0,
+        max: Number.isFinite(priceRange?.max) ? priceRange.max : null, // no guardes Infinity
+      };
+      writeGridState(storageKey, {
+        searchTerm,
+        priceRange: pr,
+        selectedBrands,
+        selectedPuffs,
+        selectedFlavors,
+        scrollY: window.scrollY,
+      });
+    }, 100); // Pequeño delay para evitar escrituras excesivas
+
+    return () => clearTimeout(timeoutId);
+  }, [storageKey, searchTerm, priceRange, selectedBrands, selectedPuffs, selectedFlavors]);
+
+  // 5) Guardar scroll periódicamente
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isInitialMount.current) return;
+
+      const saved = readGridState(storageKey);
+      if (saved) {
+        writeGridState(storageKey, {
+          ...saved,
+          scrollY: window.scrollY,
+        });
+      }
+    };
+
+    // Throttled scroll handler
+    let ticking = false;
+    const throttledScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => window.removeEventListener('scroll', throttledScroll);
+  }, [storageKey]);
+
+  // 👉 Handler para clic en "Agregar" desde la card del Grid
+  const handleQuickAdd = (product) => {
+    const hasFlavors = Array.isArray(product?.flavors) && product.flavors.length > 0
+
+    if (hasFlavors) {
+      // Solo mostramos el modal; NO agregamos al carrito
+      setModalOpen(true)
+      return
+    }
+
+    // Si no tiene sabores, agregamos normalmente
+    if (actions?.addToCart) {
+      actions.addToCart({ productId: product.id, qty: 1, flavor: null })
+    } else {
+      console.warn("addToCart no está definido en actions")
+    }
+  }
 
   const pageTitle = category || currentCategoryName || "Todos los Productos"
 
@@ -228,10 +356,22 @@ export default function ProductGrid({ category, hideFilters = false }) {
             // 2 cards por fila SIEMPRE (móvil y desktop)
             <div className="grid grid-cols-2 gap-3 sm:gap-6">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onQuickAdd={() => handleQuickAdd(product)}  // 👉 pasa el handler
+                />
               ))}
             </div>
           )}
+          {/* Modal de aviso de sabor */}
+          <Modal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            title="Seleccioná un sabor"
+            body="Antes de agregar este producto al carrito, elegí al menos un sabor."
+            confirmText="Entendido"
+          />
 
           {filteredProducts.length === 0 && !store.loading && (
             <div className="text-center py-12">
