@@ -10,38 +10,34 @@ const provincesAR = [
     "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
     "Santiago del Estero", "Tierra del Fuego", "Tucumán", "Ciudad Autónoma de Buenos Aires"
 ]
-// URL base del backend (definila en .env como VITE_BACKEND_URL, sin "/" al final)
-const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
+
+// URL base del backend
+const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || ""
 
 // Normaliza paths viejos
 const normalizeImagePath = (u = "") => {
-    if (!u) return "";
-    if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
-    if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
-    return u;
-};
+    if (!u) return ""
+    if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public")
+    if (u.startsWith("/uploads/")) u = `/public${u}`
+    return u
+}
 
-// ⬇️ Reemplazar COMPLETO por este bloque
+// URL absoluta segura
 const toAbsUrl = (u = "") => {
-    u = normalizeImagePath(u);
-    if (!u) return "";
-    if (/^https?:\/\//i.test(u)) return u;          // URL externa OK
-    if (u.startsWith("/public/")) return `${API}${u}`; // asset del backend
-    if (u.startsWith("/")) return u;                // asset del frontend (ej: /sin_imagen.jpg)
-
-    // 🔧 NUEVO: si es solo el nombre del archivo (sin "/"), trátalo como asset del frontend
-    if (!u.includes("/")) return `/${u}`;
-
-    // Relativo raro con carpeta -> asumimos backend
-    return `${API}/${u}`;
-};
-
+    u = normalizeImagePath(u)
+    if (!u) return ""
+    if (/^https?:\/\//i.test(u)) return u
+    if (u.startsWith("/public/")) return `${API}${u}`
+    if (u.startsWith("/")) return u
+    if (!u.includes("/")) return `/${u}`
+    return `${API}/${u}`
+}
 
 const Checkout = () => {
     const { store, actions } = useContext(Context)
     const navigate = useNavigate()
 
-    // === MP init (igual que tenías) ===
+    // === MP init ===
     useEffect(() => {
         try {
             const pk = import.meta.env.VITE_MP_PUBLIC_KEY
@@ -56,40 +52,61 @@ const Checkout = () => {
         }
     }, [])
 
-    // === Traer direcciones guardadas para autocompletar (si no estuvieran ya) ===
+    // Traer direcciones guardadas
     useEffect(() => {
-        // Si todavía no las tenemos, las pedimos (no rompe si ya están)
         if (!store.billingAddress || !store.shippingAddress) {
             actions.fetchUserAddresses?.().catch(() => { })
         }
     }, [])
 
-    // Helpers para partir el nombre del user
-    const userFirstName = useMemo(() => (store.user?.name || '').split(' ')[0] || '', [store.user])
-    const userLastName = useMemo(() => (store.user?.name || '').split(' ').slice(1).join(' ') || '', [store.user])
+    // Helpers de nombre del user (fallbacks)
+    const userFirstName = useMemo(
+        () => (store.user?.name || '').split(' ')[0] || '',
+        [store.user]
+    )
+    const userLastName = useMemo(
+        () => (store.user?.name || '').split(' ').slice(1).join(' ') || '',
+        [store.user]
+    )
 
-    // Prefill desde store.billingAddress / shippingAddress
-    // En AddressesPage guardamos con keys: name, lastname, dni, country, address, apartment, city, province, postalCode, phone, email
+    // Preferencias iniciales: si hay shipping guardado, úsalo como base;
+    // si hay billing guardado, úsalo; si no, fallback a user.
+    const initialBillingName = store.billingAddress?.name
+        || store.shippingAddress?.name
+        || userFirstName
+    const initialBillingLast = store.billingAddress?.lastname
+        || store.shippingAddress?.lastname
+        || userLastName
+    const initialBillingEmail = store.billingAddress?.email
+        || store.shippingAddress?.email
+        || store.user?.email
+        || ''
+
     const [billing, setBilling] = useState({
-        firstName: userFirstName,
-        lastName: userLastName,
-        email: store.user?.email || '',
-        phone: store.billingAddress?.phone || '',
-        address: store.billingAddress?.address || '',
-        apartment: store.billingAddress?.apartment || '',
-        city: store.billingAddress?.city || '',
-        province: store.billingAddress?.province || 'Córdoba',
-        zipCode: store.billingAddress?.postalCode || '',
-        country: store.billingAddress?.country || 'Argentina',
-        dni: store.dni || store.billingAddress?.dni || '',
+        firstName: initialBillingName,
+        lastName: initialBillingLast,
+        email: initialBillingEmail,
+        phone: store.billingAddress?.phone || store.shippingAddress?.phone || '',
+        address: store.billingAddress?.address || store.shippingAddress?.address || '',
+        apartment: store.billingAddress?.apartment || store.shippingAddress?.apartment || '',
+        city: store.billingAddress?.city || store.shippingAddress?.city || '',
+        province: store.billingAddress?.province || store.shippingAddress?.province || 'Córdoba',
+        zipCode: store.billingAddress?.postalCode || store.shippingAddress?.postalCode || '',
+        country: store.billingAddress?.country || store.shippingAddress?.country || 'Argentina',
+        dni: store.dni || store.billingAddress?.dni || store.shippingAddress?.dni || '',
         newsletter: false
     })
 
     const [shippingDifferent, setShippingDifferent] = useState(false)
+
+    const initialShippingName = store.shippingAddress?.name || initialBillingName
+    const initialShippingLast = store.shippingAddress?.lastname || initialBillingLast
+    const initialShippingEmail = store.shippingAddress?.email || initialBillingEmail
+
     const [shipping, setShipping] = useState({
-        firstName: userFirstName,
-        lastName: userLastName,
-        email: store.user?.email || '',
+        firstName: initialShippingName,
+        lastName: initialShippingLast,
+        email: initialShippingEmail,
         phone: store.shippingAddress?.phone || '',
         address: store.shippingAddress?.address || '',
         apartment: store.shippingAddress?.apartment || '',
@@ -100,38 +117,44 @@ const Checkout = () => {
         dni: store.dni || store.shippingAddress?.dni || ''
     })
 
-    // Cuando llegan/actualizan direcciones en store, refrescamos los forms (sin pisar lo que el user ya escribió manualmente)
+    // Cuando llegan/actualizan direcciones en store, refrescamos también nombre/apellido/email
     useEffect(() => {
-        if (store.billingAddress) {
+        if (store.billingAddress || store.user) {
             setBilling(prev => ({
                 ...prev,
-                phone: prev.phone || store.billingAddress.phone || '',
-                address: prev.address || store.billingAddress.address || '',
-                apartment: prev.apartment || store.billingAddress.apartment || '',
-                city: prev.city || store.billingAddress.city || '',
-                province: prev.province || store.billingAddress.province || 'Córdoba',
-                zipCode: prev.zipCode || store.billingAddress.postalCode || '',
-                country: prev.country || store.billingAddress.country || 'Argentina',
-                dni: prev.dni || store.dni || store.billingAddress.dni || ''
+                firstName: prev.firstName || store.billingAddress?.name || userFirstName,
+                lastName: prev.lastName || store.billingAddress?.lastname || userLastName,
+                email: prev.email || store.billingAddress?.email || store.user?.email || '',
+                phone: prev.phone || store.billingAddress?.phone || '',
+                address: prev.address || store.billingAddress?.address || '',
+                apartment: prev.apartment || store.billingAddress?.apartment || '',
+                city: prev.city || store.billingAddress?.city || '',
+                province: prev.province || store.billingAddress?.province || 'Córdoba',
+                zipCode: prev.zipCode || store.billingAddress?.postalCode || '',
+                country: prev.country || store.billingAddress?.country || 'Argentina',
+                dni: prev.dni || store.dni || store.billingAddress?.dni || ''
             }))
         }
-    }, [store.billingAddress, store.dni])
+    }, [store.billingAddress, store.user, store.dni, userFirstName, userLastName])
 
     useEffect(() => {
-        if (store.shippingAddress) {
+        if (store.shippingAddress || store.user) {
             setShipping(prev => ({
                 ...prev,
-                phone: prev.phone || store.shippingAddress.phone || '',
-                address: prev.address || store.shippingAddress.address || '',
-                apartment: prev.apartment || store.shippingAddress.apartment || '',
-                city: prev.city || store.shippingAddress.city || '',
-                province: prev.province || store.shippingAddress.province || 'Córdoba',
-                zipCode: prev.zipCode || store.shippingAddress.postalCode || '',
-                country: prev.country || store.shippingAddress.country || 'Argentina',
-                dni: prev.dni || store.dni || store.shippingAddress.dni || ''
+                firstName: prev.firstName || store.shippingAddress?.name || userFirstName,
+                lastName: prev.lastName || store.shippingAddress?.lastname || userLastName,
+                email: prev.email || store.shippingAddress?.email || store.user?.email || '',
+                phone: prev.phone || store.shippingAddress?.phone || '',
+                address: prev.address || store.shippingAddress?.address || '',
+                apartment: prev.apartment || store.shippingAddress?.apartment || '',
+                city: prev.city || store.shippingAddress?.city || '',
+                province: prev.province || store.shippingAddress?.province || 'Córdoba',
+                zipCode: prev.zipCode || store.shippingAddress?.postalCode || '',
+                country: prev.country || store.shippingAddress?.country || 'Argentina',
+                dni: prev.dni || store.dni || store.shippingAddress?.dni || ''
             }))
         }
-    }, [store.shippingAddress, store.dni])
+    }, [store.shippingAddress, store.user, store.dni, userFirstName, userLastName])
 
     // Manejo inputs
     const handleBillingChange = (e) => {
@@ -152,7 +175,7 @@ const Checkout = () => {
     const shippingCost = 0
     const total = subtotal + shippingCost
 
-    // Validación mínima
+    // Validaciones mínimas
     const billingValid =
         billing.email &&
         billing.firstName &&
@@ -200,7 +223,6 @@ const Checkout = () => {
                 }
             })
 
-            // Enviamos info del payer (no rompe tu backend; es útil para pref.)
             const preferenceData = {
                 items,
                 payer: {
@@ -213,9 +235,7 @@ const Checkout = () => {
                         street_name: billing.address,
                         zip_code: billing.zipCode
                     } : undefined
-                },
-                // Si querés, podés mandar un shipping_address también:
-                // shipments lo maneja el backend si lo necesitas.
+                }
             }
 
             const token = localStorage.getItem('token')
@@ -603,19 +623,16 @@ const Checkout = () => {
                                             alt={item?.name || "Producto"}
                                             width={48}
                                             height={48}
-                                            className="w-12 h-12 rounded bg-gray-100 object-contain"  // contén la imagen, no la recortes
+                                            className="w-12 h-12 rounded bg-gray-100 object-contain"
                                             loading="lazy"
                                             decoding="async"
                                             onError={(e) => {
-                                                // evita loop si la default fallara (raro) y asegura fallback
                                                 if (!e.currentTarget.src.endsWith("/sin_imagen.jpg")) {
                                                     e.currentTarget.onerror = null
                                                     e.currentTarget.src = "/sin_imagen.jpg"
                                                 }
                                             }}
                                         />
-
-
                                         <div>
                                             <p className="font-medium text-sm">
                                                 {item.name}
@@ -677,8 +694,8 @@ const Checkout = () => {
                                 onClick={createPreference}
                                 disabled={!isFormValid() || loading}
                                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${isFormValid() && !loading
-                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? 'Procesando...' : 'Continuar al pago'}
@@ -694,9 +711,7 @@ const Checkout = () => {
                                             preferenceId: preferenceId,
                                             redirectMode: 'self'
                                         }}
-                                        customization={{
-                                            texts: { valueProp: 'smart_option' }
-                                        }}
+                                        customization={{ texts: { valueProp: 'smart_option' } }}
                                         onReady={() => console.log('Wallet ready')}
                                         onError={(error) => console.error('Wallet error:', error)}
                                     />
