@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_mail import Mail
 from dotenv import load_dotenv
+
 load_dotenv()
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 
@@ -51,14 +52,13 @@ def create_app():
     print("MAIL_PASS_LEN:", len(str(app.config.get("MAIL_PASSWORD") or "")))
     print("MAIL_DEFAULT_SENDER:", app.config.get("MAIL_DEFAULT_SENDER"))
 
-
     # Creamos carpeta de base de datos si no existe
     db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'mydatabase.db')
     print(f"Ruta de la base de datos: {db_path}")
     if not os.path.exists(os.path.dirname(db_path)):
         os.makedirs(os.path.dirname(db_path))
 
-    # Registramos blueprints
+    # Registramos blueprints existentes
     from app.routes.user_bp import user_bp
     from app.routes.public_bp import public_bp
     from app.routes.admin_bp import admin_bp
@@ -69,4 +69,5 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(mercadopago_bp, url_prefix='/api/mercadopago')
 
+    # ⚠️ No hay api.py adicional; /me/address no existe. Usar /user/address en el front.
     return app

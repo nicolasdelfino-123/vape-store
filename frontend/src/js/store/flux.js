@@ -34,47 +34,44 @@ const getState = ({ getStore, getActions, setStore }) => {
 					...(token ? { "Authorization": `Bearer ${token}` } : {})
 				};
 			},
+
 			fetchUserAddresses: async () => {
 				const store = getStore();
 				const token = localStorage.getItem("token");
 				if (!token) return null;
 
 				try {
-					const res = await fetch(`${backendUrl}/user/address`, {
+					const url = `${backendUrl}/user/address`;
+					const res = await fetch(url, {
 						headers: { "Authorization": `Bearer ${token}` }
 					});
-					if (!res.ok) throw new Error("No se pudo obtener direcciones");
-					const data = await res.json(); // { billing_address, shipping_address, dni }
 
+					if (!res.ok) {
+						throw new Error(`[${res.status}] ${res.statusText || "No se pudo obtener direcciones"}`);
+					}
+
+					const data = await res.json(); // { billing_address, shipping_address, dni }
 					setStore({
 						...store,
 						billingAddress: data.billing_address || null,
 						shippingAddress: data.shipping_address || null,
 						dni: data.dni || ""
 					});
-
 					return data;
 				} catch (e) {
 					console.error("fetchUserAddresses:", e);
 					return null;
 				}
 			},
-			fetchUserBillingAddress: async () => {
-				const data = await getActions().fetchUserAddresses();
-				return data?.billing_address || null;
-			},
 
-			fetchUserShippingAddress: async () => {
-				const data = await getActions().fetchUserAddresses();
-				return data?.shipping_address || null;
-			},
 			updateUserAddressTyped: async (type, payload) => {
 				const store = getStore();
 				const token = localStorage.getItem("token");
 				if (!token) return false;
 
 				try {
-					const res = await fetch(`${backendUrl}/me/address`, {
+					const url = `${backendUrl}/user/address`;
+					const res = await fetch(url, {
 						method: "PUT",
 						headers: {
 							"Content-Type": "application/json",
@@ -85,25 +82,34 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 					if (!res.ok) {
 						const err = await res.json().catch(() => ({}));
-						console.error("updateUserAddressTyped:", err);
+						console.error("updateUserAddressTyped:", res.status, err);
 						return false;
 					}
 
-					// Refrescamos del backend para mantener fuente de verdad
-					const refreshed = await getActions().fetchUserAddresses();
-
-					// Mensajito opcional
-					setStore({
-						...store,
-						updateStatusMsg: `Dirección de ${type} actualizada`
-					});
-
-					return !!refreshed;
+					await getActions().fetchUserAddresses();
+					setStore({ ...store, updateStatusMsg: `Dirección de ${type} actualizada` });
+					return true;
 				} catch (e) {
 					console.error("updateUserAddressTyped:", e);
 					return false;
 				}
 			},
+
+			// Azúcar: guardar envío usando la función tipada
+			fetchUserBillingAddress: async () => {
+				const data = await getActions().fetchUserAddresses();
+				return data?.billing_address || null;
+			},
+
+			fetchUserShippingAddress: async () => {
+				const data = await getActions().fetchUserAddresses();
+				return data?.shipping_address || null;
+			},
+
+			saveShippingAddress: async (payload) => {
+				return getActions().updateUserAddressTyped("shipping", payload);
+			},
+
 
 
 			exampleFunction: () => {

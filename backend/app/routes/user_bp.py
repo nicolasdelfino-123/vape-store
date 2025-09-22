@@ -400,7 +400,11 @@ def address_get():
     user = User.query.get(current_user_id)
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
-    return jsonify({"address": user.address or "", "phone": user.phone or ""}), 200
+    return jsonify({
+        "billing_address": user.billing_address or {},
+        "shipping_address": user.shipping_address or {},
+        "dni": user.dni or ""
+    }), 200
 
 @user_bp.route("/address", methods=["PUT"])
 @jwt_required()
@@ -411,12 +415,22 @@ def address_update():
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     data = request.get_json() or {}
-    user.address = data.get("address", user.address)
-    user.phone = data.get("phone", user.phone)
+    addr_type = data.get("type")
+    payload = data.get("payload")
+
+    if addr_type not in ("shipping", "billing"):
+        return jsonify({"error": "tipo inválido"}), 400
+
+    if payload.get("dni"):
+        user.dni = payload["dni"]
+
+    if addr_type == "billing":
+        user.billing_address = payload
+    else:  # shipping
+        user.shipping_address = payload
 
     db.session.commit()
-    return jsonify({"address": user.address or "", "phone": user.phone or ""}), 200
-
+    return jsonify({"ok": True})
 
 # NUEVO: Registro con envío de email
 @user_bp.route('/register-email', methods=['POST'])

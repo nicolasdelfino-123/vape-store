@@ -17,13 +17,8 @@ export default function Login() {
         remember: false
     });
 
-    const [registerForm, setRegisterForm] = useState({
-        email: ""
-    });
-
-    const [forgotPasswordForm, setForgotPasswordForm] = useState({
-        email: ""
-    });
+    const [registerForm, setRegisterForm] = useState({ email: "" });
+    const [forgotPasswordForm, setForgotPasswordForm] = useState({ email: "" });
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -31,7 +26,6 @@ export default function Login() {
         setError("");
 
         const result = await actions.login(loginForm.email, loginForm.password);
-
         if (result.success) {
             navigate("/cuenta");
         } else {
@@ -46,7 +40,6 @@ export default function Login() {
         setError("");
 
         const result = await actions.sendPasswordSetupEmail(registerForm.email);
-
         if (result.success) {
             setMessage("Se enviará un enlace a tu dirección de correo electrónico para establecer una nueva contraseña.");
         } else {
@@ -61,7 +54,6 @@ export default function Login() {
         setError("");
 
         const result = await actions.forgotPassword(forgotPasswordForm.email);
-
         if (result.success) {
             setMessage("Se ha enviado un enlace de recuperación a tu correo electrónico.");
         } else {
@@ -97,7 +89,6 @@ export default function Login() {
                             {message}
                         </div>
                     )}
-
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
                             {error}
@@ -106,13 +97,19 @@ export default function Login() {
 
                     {/* Formulario Login */}
                     {!isRegister && !isForgotPassword && (
-                        <form onSubmit={handleLogin} className="space-y-4">
+                        <form onSubmit={handleLogin} autoComplete="on" className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nombre de usuario o correo electrónico *
+                                <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Correo electrónico *
                                 </label>
                                 <input
+                                    id="login-email"
+                                    name="email"
                                     type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
                                     required
                                     value={loginForm.email}
                                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
@@ -121,11 +118,14 @@ export default function Login() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">
                                     Contraseña *
                                 </label>
                                 <input
+                                    id="login-password"
+                                    name="password"
                                     type="password"
+                                    autoComplete="current-password"
                                     required
                                     value={loginForm.password}
                                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
@@ -169,13 +169,19 @@ export default function Login() {
 
                     {/* Formulario Registro */}
                     {isRegister && !isForgotPassword && (
-                        <form onSubmit={handleRegister} className="space-y-4">
+                        <form onSubmit={handleRegister} autoComplete="on" className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 mb-1">
                                     Correo electrónico *
                                 </label>
                                 <input
+                                    id="register-email"
+                                    name="email"
                                     type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
                                     required
                                     value={registerForm.email}
                                     onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
@@ -195,13 +201,19 @@ export default function Login() {
 
                     {/* Formulario Recuperar Contraseña */}
                     {isForgotPassword && (
-                        <form onSubmit={handleForgotPassword} className="space-y-4">
+                        <form onSubmit={handleForgotPassword} autoComplete="on" className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-1">
                                     Correo electrónico *
                                 </label>
                                 <input
+                                    id="forgot-email"
+                                    name="email"
                                     type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
                                     required
                                     value={forgotPasswordForm.email}
                                     onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, email: e.target.value })}
@@ -241,10 +253,7 @@ export default function Login() {
                                 }}
                                 className="text-sm text-gray-600 hover:underline"
                             >
-                                {isRegister
-                                    ? "¿Ya tenés cuenta? Iniciar sesión"
-                                    : "¿No tenés cuenta? Registrarse"
-                                }
+                                {isRegister ? "¿Ya tenés cuenta? Iniciar sesión" : "¿No tenés cuenta? Registrarse"}
                             </button>
                         )}
                     </div>
