@@ -473,7 +473,7 @@ export default function AdminProducts() {
                         flavors: [],
                         is_active: true,
                         // 👇 DEFAULT DE IMAGEN (ruta servida por tu backend)
-                        image_url: { sinImagen },
+                        image_url: sinImagen,
                         image_urls: [],
                         puffs: "", // 👈 nuevo campo editable
                     })}
