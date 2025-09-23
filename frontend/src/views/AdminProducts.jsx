@@ -167,6 +167,13 @@ const normalizeImagePath = (u = "") => {
     return u;
 };
 
+// Extrae el ID numérico de URLs tipo "/public/img/123"
+const extractImageId = (u = "") => {
+    const m = String(u || "").match(/\/public\/img\/(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+};
+
+
 // Convierte relativo → absoluto
 // Debe quedar exactamente así:
 const toAbsUrl = (u = "") => {
@@ -270,6 +277,50 @@ export default function AdminProducts() {
         }
     };
 
+    const deleteSelectedImage = async () => {
+        if (!form) return;
+        const selectedUrl = form.image_url || "";
+        const imageId = extractImageId(selectedUrl);
+
+        // Solo podemos borrar imágenes servidas por el backend (/public/img/<id>)
+        if (!imageId) {
+            alert("La imagen seleccionada no es una imagen interna (no se puede borrar desde aquí).");
+            return;
+        }
+
+        if (!confirm("¿Eliminar la foto seleccionada? Esta acción no se puede deshacer.")) return;
+
+        try {
+            const res = await fetch(`${API}/admin/images/${imageId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(`No se pudo eliminar la imagen: ${data?.error || res.statusText}`);
+                return;
+            }
+
+            // Actualizar estado local: sacar la URL borrada de la galería
+            setForm(prev => {
+                if (!prev) return prev;
+                const deletedUrl = `/public/img/${imageId}`;
+                const nextGallery = (prev.image_urls || []).filter(u => normalizeImagePath(u) !== deletedUrl);
+
+                // Si la principal era la borrada, setear otra, o fallback
+                let nextMain = prev.image_url;
+                if (normalizeImagePath(prev.image_url) === deletedUrl) {
+                    nextMain = nextGallery[0] || "/sin_imagen.jpg"; // fallback visible del frontend
+                }
+
+                return { ...prev, image_urls: nextGallery, image_url: nextMain };
+            });
+
+        } catch (e) {
+            console.error(e);
+            alert("Error eliminando la imagen");
+        }
+    };
 
 
     const shouldShowFlavors = (categoryId) => [1, 3].includes(Number(categoryId))
@@ -318,26 +369,57 @@ export default function AdminProducts() {
 
             const res = await fetch(url, {
                 method,
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify(payload),
-            })
+            });
 
-            if (res.ok) {
-                setForm(null)
-                fetchAll()
-                alert(form.id ? "Producto actualizado" : "Producto creado exitosamente")
-            } else {
-                const error = await res.json().catch(() => ({}))
-                alert(`Error: ${error.error || "No se pudo guardar el producto"}`)
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(`Error: ${json.error || "No se pudo guardar el producto"}`);
+                return;
             }
+
+            // ✅ Si es creación, ATAMOS las imágenes subidas antes de tener id
+            if (!form.id) {
+                const newProduct = json.product; // tu create_product devuelve { product: ... }
+                const newId = newProduct?.id;
+                if (newId) {
+                    // Extraer ids de URLs tipo "/public/img/123"
+                    const ids = Array.isArray(form.image_urls)
+                        ? form.image_urls
+                            .map(u => {
+                                const m = String(u || "").match(/\/public\/img\/(\d+)/);
+                                return m ? parseInt(m[1], 10) : null;
+                            })
+                            .filter(Boolean)
+                        : [];
+
+                    // main_id desde la imagen principal seleccionada en el form
+                    let mainId = null;
+                    if (form.image_url) {
+                        const m = String(form.image_url).match(/\/public\/img\/(\d+)/);
+                        if (m) mainId = parseInt(m[1], 10);
+                    }
+
+                    if (ids.length > 0) {
+                        await fetch(`${API}/admin/products/${newId}/attach-images`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ image_ids: ids, main_id: mainId }),
+                        }).catch(() => { });
+                    }
+                }
+            }
+
+            setForm(null);
+            fetchAll();
+            alert(form.id ? "Producto actualizado" : "Producto creado exitosamente");
+
         } catch (error) {
-            console.error("Error saving product:", error)
-            alert("Error al guardar producto")
+            console.error("Error saving product:", error);
+            alert("Error al guardar producto");
         }
-    }
+    };
 
     const filtered = products.filter((p) => {
         const matchesSearch =
@@ -574,7 +656,8 @@ export default function AdminProducts() {
             {/* Modal edición/creación */}
             {form && (
                 <form onSubmit={save} className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-3 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-3xl space-y-3 max-h-[90vh] overflow-y-auto">
+
                         <h2 className="text-lg font-semibold">{form.id ? "Editar" : "Nuevo"} Producto</h2>
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -781,6 +864,15 @@ export default function AdminProducts() {
                             >
                                 Agregar foto
                             </button>
+                            <button
+                                type="button"
+                                onClick={deleteSelectedImage}
+                                className="px-3 py-2 border rounded hover:bg-red-50 shrink-0 text-red-700"
+                                title="Eliminar la foto seleccionada (principal)"
+                            >
+                                Eliminar foto seleccionada
+                            </button>
+
                         </div>
 
 

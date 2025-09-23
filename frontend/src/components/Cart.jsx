@@ -31,6 +31,7 @@ const toAbsUrl = (u = "") => {
 };
 
 
+
 // helper para título robusto
 const getTitle = (it) => {
   let base = String(it?.name ?? it?.product?.name ?? it?.title ?? "Producto");
@@ -119,192 +120,211 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
           </div>
         ) : (
           <>
-            {store.cart.map((item) => (
-              <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
-                <div className="flex gap-3">
-                  <img
-                    src={toAbsUrl(item?.image_url) || "/sin_imagen.jpg"}
-                    alt={getTitle(item)}
-                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => { e.currentTarget.src = "/sin_imagen.jpg"; }}
-                  />
+            {store.cart.map((item) => {
+              // máximo permitido (respeta sabor si existe)
+              const max = (item?.selectedFlavor && Array.isArray(item?.flavor_catalog))
+                ? (item.flavor_catalog.find(f => f?.name === item.selectedFlavor)?.stock ?? (Number.isFinite(Number(item?.stock)) ? Number(item.stock) : 0))
+                : (Number.isFinite(Number(item?.stock)) ? Number(item.stock) : 0);
 
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="font-medium text-sm sm:text-base leading-snug">
-                          {getTitle(item)}
-                        </h4>
-                        <p className="text-gray-900 font-semibold">
-                          ${Number(item.price || 0).toLocaleString("es-AR")}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => actions.removeFromCart(item.id)}
-                        className="text-gray-400 hover:text-gray-600"
-                        aria-label="Eliminar producto"
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+              const atLimit = Number(item.quantity || 0) >= Number(max || 0);
 
-                    <div className="mt-3 flex items-center justify-between">
-                      {/* Controles cantidad */}
-                      <div className="flex items-center gap-2">
+              return (
+                <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
+                  <div className="flex gap-3">
+                    <img
+                      src={toAbsUrl(item?.image_url) || "/sin_imagen.jpg"}
+                      alt={getTitle(item)}
+                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => { e.currentTarget.src = "/sin_imagen.jpg"; }}
+                    />
+
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-medium text-sm sm:text-base leading-snug">
+                            {getTitle(item)}
+                          </h4>
+                          <p className="text-gray-900 font-semibold">
+                            ${Number(item.price || 0).toLocaleString("es-AR")}
+                          </p>
+                        </div>
                         <button
-                          onClick={() =>
-                            actions.updateCartQuantity(
-                              item.id,
-                              Math.max(1, (item.quantity || 1) - 1)
-                            )
-                          }
-                          aria-label="Disminuir cantidad"
-                          className="w-9 h-9 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-lg"
+                          onClick={() => actions.removeFromCart(item.id)}
+                          className="text-gray-400 hover:text-gray-600"
+                          aria-label="Eliminar producto"
+                          title="Eliminar"
                         >
-                          -
-                        </button>
-                        <span className="min-w-[36px] text-center font-medium">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() =>
-                            actions.updateCartQuantity(item.id, (item.quantity || 1) + 1)
-                          }
-                          aria-label="Aumentar cantidad"
-                          className="w-9 h-9 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-lg"
-                        >
-                          +
+                          🗑️
                         </button>
                       </div>
 
-                      {/* Total por ítem */}
-                      <div className="text-right font-semibold">
-                        $
-                        {(
-                          Number(item.price || 0) * Number(item.quantity || 0)
-                        ).toLocaleString("es-AR")}
+                      <div className="mt-3 flex items-center justify-between">
+                        {/* Controles cantidad */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              actions.updateCartQuantity(
+                                item.id,
+                                Math.max(1, (item.quantity || 1) - 1)
+                              )
+                            }
+                            aria-label="Disminuir cantidad"
+                            className="w-9 h-9 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-lg"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-[36px] text-center font-medium">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const next = Math.min((item.quantity || 1) + 1, Number(max || 0));
+                              actions.updateCartQuantity(item.id, next);
+                            }}
+                            aria-label="Aumentar cantidad"
+                            disabled={atLimit}
+                            title={atLimit ? "Sin stock disponible" : "Aumentar cantidad"}
+                            className={`w-9 h-9 rounded flex items-center justify-center text-lg ${atLimit ? "bg-gray-100 opacity-50 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"
+                              }`}
+                          >
+                            +
+                          </button>
+
+                        </div>
+
+                        {/* Total por ítem */}
+                        <div className="text-right font-semibold">
+                          $
+                          {(
+                            Number(item.price || 0) * Number(item.quantity || 0)
+                          ).toLocaleString("es-AR")}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </>
+        )}
 
-            {/* Subtotal */}
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-gray-700">
-                Subtotal <span className="text-sm text-gray-400">(sin envío)</span> :
-              </span>
-              <span className="font-semibold">
+
+        {/* Subtotal */}
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-gray-700">
+            Subtotal <span className="text-sm text-gray-400">(sin envío)</span> :
+          </span>
+          <span className="font-semibold">
+            ${total.toLocaleString("es-AR")}
+          </span>
+        </div>
+
+        {/* Medios de envío */}
+        <div className="pt-2">
+          <h3 className="font-semibold mb-2 flex items-center gap-2">
+            <span>Medios de envío</span>
+          </h3>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Tu código postal"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              className="flex-1 border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-200"
+            />
+            <button
+              onClick={() => {
+                actions.showToast?.("Cálculo de envío próximamente");
+              }}
+              className="px-4 sm:px-5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+            >
+              CALCULAR
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              window.open(
+                "https://www.correoargentino.com.ar/formularios/cpa",
+                "_blank"
+              )
+            }
+            className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
+          >
+            No sé mi código postal
+          </button>
+        </div>
+
+        {/* Nuestro local */}
+        <div>
+          <h3 className="font-semibold mb-2">Nuestro local</h3>
+          <label className="flex items-start gap-3 bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
+            <input
+              type="checkbox"
+              checked={pickup}
+              onChange={(e) => setPickup(e.target.checked)}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <p className="text-sm sm:text-base">
+                Local Vapeclub - Arturo illia 636
+                <span className="block text-gray-500">
+                  Lunes a viernes 10:30hs a 13:00hs | 16:00hs hasta 22:00hs
+                  <br />
+                  Sábado 13:00hs a 22:00hs | Domingo cerrado
+                </span>
+              </p>
+            </div>
+            <span className="text-green-600 font-semibold">Gratis</span>
+          </label>
+        </div>
+
+
+      </div>
+
+      {/* Footer Totales / Acciones */}
+      {
+        store.cart && store.cart.length > 0 && (
+          <div className="border-t p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xl font-semibold">Total:</span>
+              <span className="text-2xl font-bold text-purple-600">
                 ${total.toLocaleString("es-AR")}
               </span>
             </div>
 
-            {/* Medios de envío */}
-            <div className="pt-2">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <span>Medios de envío</span>
-              </h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Tu código postal"
-                  value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value)}
-                  className="flex-1 border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-200"
-                />
-                <button
-                  onClick={() => {
-                    actions.showToast?.("Cálculo de envío próximamente");
-                  }}
-                  className="px-4 sm:px-5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-                >
-                  CALCULAR
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  window.open(
-                    "https://www.correoargentino.com.ar/formularios/cpa",
-                    "_blank"
-                  )
+            <button
+              onClick={() => {
+                if (isRouteMode) {
+                  navigate('/checkout')
+                } else {
+                  close()
+                  navigate('/checkout')
                 }
-                className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
-              >
-                No sé mi código postal
-              </button>
+              }}
+              className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+            >
+              INICIAR COMPRA
+            </button>
+
+            <div className="mt-4 text-center">
+              {isRouteMode ? (
+                <Link to="/" className="text-gray-700 underline hover:text-gray-900">
+                  Ver más productos
+                </Link>
+              ) : (
+                <button onClick={close} className="text-gray-700 underline hover:text-gray-900">
+                  Ver más productos
+                </button>
+              )}
             </div>
-
-            {/* Nuestro local */}
-            <div>
-              <h3 className="font-semibold mb-2">Nuestro local</h3>
-              <label className="flex items-start gap-3 bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
-                <input
-                  type="checkbox"
-                  checked={pickup}
-                  onChange={(e) => setPickup(e.target.checked)}
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <p className="text-sm sm:text-base">
-                    Local Vapeclub - Arturo illia 636
-                    <span className="block text-gray-500">
-                      Lunes a viernes 10:30hs a 13:00hs | 16:00hs hasta 22:00hs
-                      <br />
-                      Sábado 13:00hs a 22:00hs | Domingo cerrado
-                    </span>
-                  </p>
-                </div>
-                <span className="text-green-600 font-semibold">Gratis</span>
-              </label>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Footer Totales / Acciones */}
-      {store.cart && store.cart.length > 0 && (
-        <div className="border-t p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xl font-semibold">Total:</span>
-            <span className="text-2xl font-bold text-purple-600">
-              ${total.toLocaleString("es-AR")}
-            </span>
           </div>
-
-          <button
-            onClick={() => {
-              if (isRouteMode) {
-                navigate('/checkout')
-              } else {
-                close()
-                navigate('/checkout')
-              }
-            }}
-            className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-          >
-            INICIAR COMPRA
-          </button>
-
-          <div className="mt-4 text-center">
-            {isRouteMode ? (
-              <Link to="/" className="text-gray-700 underline hover:text-gray-900">
-                Ver más productos
-              </Link>
-            ) : (
-              <button onClick={close} className="text-gray-700 underline hover:text-gray-900">
-                Ver más productos
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 
   // Si es modo ruta, se muestra como página normal (sin overlay).

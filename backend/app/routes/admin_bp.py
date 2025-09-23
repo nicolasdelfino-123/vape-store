@@ -347,5 +347,76 @@ def upload_image():
     return jsonify({'url': img_url, 'image_id': db_image.id}), 201
 
 
+# --- NUEVO: asociar imágenes huérfanas a un producto ---
+@admin_bp.route('/products/<int:product_id>/attach-images', methods=['POST'])
+@jwt_required()
+def attach_images(product_id):
+    if not admin_required():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    data = request.get_json() or {}
+    image_ids = data.get('image_ids') or []
+    main_id = data.get('main_id')  # opcional: id de la imagen principal
+
+    if not isinstance(image_ids, list):
+        return jsonify({'error': 'image_ids debe ser lista de enteros'}), 400
+
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'error': 'Producto no encontrado'}), 404
+
+    # Buscar y asociar
+    imgs = ProductImage.query.filter(ProductImage.id.in_(image_ids)).all()
+    for im in imgs:
+        im.product_id = product_id
+    db.session.commit()
+
+    # Si mandaste main_id, setear imagen principal (sin pisar si ya hay una a menos que la pidas)
+    if main_id:
+        try:
+            main_id = int(main_id)
+            # armamos la misma URL que devolvés al subir (/public/img/<id>)
+            product.image_url = f"/public/img/{main_id}"
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return jsonify({
+        'message': f'{len(imgs)} imágenes asociadas al producto {product_id}.',
+        'attached_ids': [im.id for im in imgs],
+        'product_id': product_id
+    }), 200
 
 
+# --- NUEVO: eliminar imagen por ID ---
+@admin_bp.route('/images/<int:image_id>', methods=['DELETE'])
+@jwt_required()
+def delete_image(image_id):
+    if not admin_required():
+        return jsonify({'error': 'Acceso denegado.'}), 403
+
+    img = ProductImage.query.get(image_id)
+    if not img:
+        return jsonify({'error': 'Imagen no encontrada'}), 404
+
+    # Guardamos el product_id antes de borrar para poder ajustar principal
+    pid = img.product_id
+
+    db.session.delete(img)
+    db.session.commit()
+
+    # Si estaba asociada a un producto y la principal del producto apuntaba a esta imagen,
+    # reasignar principal a otra imagen del mismo producto (si existe), o dejar None.
+    if pid:
+        product = Product.query.get(pid)
+        if product:
+            # ¿La principal apuntaba a /public/img/<image_id>?
+            current = (product.image_url or '').strip()
+            is_same = current.endswith(f"/public/img/{image_id}") or current == f"/public/img/{image_id}"
+            if is_same:
+                # Buscar otra imagen del producto
+                next_img = ProductImage.query.filter_by(product_id=pid).order_by(ProductImage.id.asc()).first()
+                product.image_url = f"/public/img/{next_img.id}" if next_img else None
+                db.session.commit()
+
+    return jsonify({'message': f'Imagen {image_id} eliminada'}), 200
