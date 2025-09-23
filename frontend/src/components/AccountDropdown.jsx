@@ -51,16 +51,18 @@ export default function AccountDropdown() {
                         Cerrar sesión
                     </button>
 
-                    {/* Botón Admin con navigate funcionando */}
-                    <button
-                        onClick={() => {
-                            setOpen(false);
-                            navigate("/admin/login");
-                        }}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                    >
-                        Admin
-                    </button>
+                    {/* Botón Admin solo si el usuario es admin@vapestore.com */}
+                    {store.user?.email === "admin@vapestore.com" && (
+                        <button
+                            onClick={() => {
+                                setOpen(false);
+                                navigate("/admin/login");
+                            }}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                            Admin
+                        </button>
+                    )}
                 </div>
             )}
         </div>
