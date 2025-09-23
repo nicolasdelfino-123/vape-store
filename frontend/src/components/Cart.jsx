@@ -270,7 +270,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
             />
             <div className="flex-1">
               <p className="text-sm sm:text-base">
-                Local Vapeclub - Arturo illia 636
+                Local Zarpados - Velez Sarsfield 303
                 <span className="block text-gray-500">
                   Lunes a viernes 10:30hs a 13:00hs | 16:00hs hasta 22:00hs
                   <br />
