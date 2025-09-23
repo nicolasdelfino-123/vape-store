@@ -250,11 +250,22 @@ const Checkout = () => {
             })
 
             if (!response.ok) {
-                const errorText = await response.text()
-                let errorData
-                try { errorData = JSON.parse(errorText) } catch { errorData = { error: errorText } }
-                throw new Error(errorData.error || `Error HTTP ${response.status}`)
+                const errorText = await response.text();
+                let errorData = null;
+                try { errorData = JSON.parse(errorText); } catch { errorData = { raw: errorText }; }
+
+                // 🔎 Mostramos TODO en consola para debugear rápido
+                console.error("MP preference error payload:", errorData);
+
+                // 🧠 Mensaje visible con la 'reason' que te manda el backend
+                const visible = errorData?.reason
+                    || errorData?.error
+                    || `Error HTTP ${response.status}`;
+
+                alert(`Error al crear la preferencia de pago:\n${visible}`);
+                return; // cortamos el flujo sin lanzar excepción (ya mostramos alert)
             }
+
 
             const data = await response.json()
             if (data.preference_id) {
@@ -694,8 +705,8 @@ const Checkout = () => {
                                 onClick={createPreference}
                                 disabled={!isFormValid() || loading}
                                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${isFormValid() && !loading
-                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? 'Procesando...' : 'Continuar al pago'}
