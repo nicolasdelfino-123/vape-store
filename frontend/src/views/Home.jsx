@@ -2,6 +2,12 @@ import React, { useContext, useEffect } from 'react'
 import { Context } from '../js/store/appContext.jsx';
 import { Link } from "react-router-dom";
 import ProductGrid from '../components/ProductGrid.jsx';
+import heroBg from '@/assets/hero-bg.png'
+import recargables from '@/assets/recargables.png'
+import celu from '@/assets/celu.png'
+import desechables from '@/assets/desechables.png'
+import perfumes from '@/assets/perfumes.png'
+
 
 function Home() {
   const { store, actions } = useContext(Context);
@@ -31,7 +37,7 @@ function Home() {
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/hero-bg.png"
+            src={heroBg}
             alt="Vapeadores background"
             className="w-full h-full object-cover opacity-30"
             loading="eager"
@@ -110,7 +116,7 @@ function Home() {
                 <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                    style={{ backgroundImage: "url(/recargables.png)" }}
+                    style={{ backgroundImage: `url(${recargables})` }}
                     aria-hidden
                   />
                   <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -139,7 +145,7 @@ function Home() {
                 <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                    style={{ backgroundImage: "url(/celu.png)" }}
+                    style={{ backgroundImage: `url(${celu})` }}
                     aria-hidden
                   />
                   <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -173,7 +179,7 @@ function Home() {
                 <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                    style={{ backgroundImage: "url(/desechables.png)" }}
+                    style={{ backgroundImage: `url(${desechables})` }}
                     aria-hidden
                   />
                   <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -202,7 +208,7 @@ function Home() {
                 <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                    style={{ backgroundImage: "url(/perfumes.png)" }}
+                    style={{ backgroundImage: `url(${perfumes})` }}
                     aria-hidden
                   />
                   <div className="absolute inset-0 bg-black/20" aria-hidden />

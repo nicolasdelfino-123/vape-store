@@ -3,6 +3,16 @@ import { Context } from '../js/store/appContext.jsx';
 import { Link } from "react-router-dom";
 import ProductCard from '../components/ProductCard.jsx';
 import { useLocation } from "react-router-dom";
+import heroBg from '@/assets/hero-bg.png'
+import banner1 from '@/assets/banner-1.png'
+import recargables from '@/assets/recargables.png'
+import celu from '@/assets/celu.png'
+import desechables from '@/assets/desechables.png'
+import perfumes from '@/assets/perfumes.png'
+import accesorios from '@/assets/accesorios.png'
+import liquidos from '@/assets/liquidos.png'
+
+
 
 function Inicio() {
     const { store, actions } = useContext(Context);
@@ -95,7 +105,7 @@ function Inicio() {
                 {/* Background Image */}
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="/hero-bg.png"
+                        src={heroBg}
                         alt="Vapeadores background"
                         className="w-full h-full object-cover opacity-30"
                         loading="eager"
@@ -171,13 +181,13 @@ function Inicio() {
 
             {/* banner animado */}
             {/* banner animado */}
-            <section className="relative bg-gray-800 py-4 fade-in-section" id="banner-animado">
+            <section className="relative bg-gray-800 py-5 fade-in-section" id="banner-animado">
                 {/* Fondo */}
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="/banner-1.png"
+                        src={banner1}
                         alt="Banner background"
-                        className="w-full h-full object-cover opacity-60"
+                        className="w-full h-full object-cover object-[center_41%] opacity-60"
                         loading="lazy"
                         decoding="async"
                     />
@@ -189,19 +199,19 @@ function Inicio() {
                     <div className="marquee-track will-change-transform">
                         {/* Grupo 1 */}
                         <div className="marquee-group">
-                            <span className="text-white text-lg md:text-xl font-semibold mx-[40px]">
+                            <span className="text-white text-lg md:text-2xl font-semibold mx-[40px]">
                                 ¡Envíos a todo el país! • Productos originales • Descuentos exclusivos
                             </span>
-                            <span className="text-white text-lg md:text-xl font-semibold mx-[40px]" aria-hidden="true">
+                            <span className="text-white text-lg md:text-2xl font-semibold mx-[40px]" aria-hidden="true">
                                 ¡Envíos a todo el país! • Productos originales • Descuentos exclusivos
                             </span>
                         </div>
                         {/* Grupo 2 (clon) */}
                         <div className="marquee-group" aria-hidden="true">
-                            <span className="text-white text-lg md:text-xl font-semibold mx-[40px]">
+                            <span className="text-white text-lg md:text-2xl font-semibold mx-[40px]">
                                 ¡Envíos a todo el país! • Productos originales • Descuentos exclusivos
                             </span>
-                            <span className="text-white text-lg md:text-xl font-semibold mx-[40px]" aria-hidden="true">
+                            <span className="text-white text-lg md:text-2xl font-semibold mx-[40px]" aria-hidden="true">
                                 ¡Envíos a todo el país! • Productos originales • Descuentos exclusivos
                             </span>
                         </div>
@@ -233,7 +243,7 @@ function Inicio() {
                         <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(/recargables.png)" }}
+                                style={{ backgroundImage: `url(${recargables})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -255,7 +265,7 @@ function Inicio() {
                         <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(/celu.png)" }}
+                                style={{ backgroundImage: `url(${celu})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -277,7 +287,7 @@ function Inicio() {
                         <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(/desechables.png)" }}
+                                style={{ backgroundImage: `url(${desechables})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -299,7 +309,7 @@ function Inicio() {
                         <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(/perfumes.png)" }}
+                                style={{ backgroundImage: `url(${perfumes})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -322,7 +332,7 @@ function Inicio() {
                             <div
 
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(public/accesorios.png)" }}
+                                style={{ backgroundImage: `url(${accesorios})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
@@ -344,7 +354,7 @@ function Inicio() {
                         <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: "url(public/liquidos.png)" }}
+                                style={{ backgroundImage: `url(${liquidos})` }}
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />

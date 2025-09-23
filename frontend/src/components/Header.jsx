@@ -3,6 +3,9 @@ import { Context } from "../js/store/appContext.jsx";
 import Cart from "../components/Cart.jsx";
 import AccountDropdown from "../components/AccountDropdown.jsx";
 import { Link, useNavigate } from "react-router-dom";
+import logo from '@/assets/logo.png'
+import logo22 from '@/assets/logo-22.png'
+
 
 export default function Header() {
   const { store, actions } = useContext(Context);
@@ -162,7 +165,7 @@ export default function Header() {
                 }}
                 onError={(e) => {
                   console.log("Error cargando logo:", e);
-                  e.target.src = "/logo.png"; // fallback
+                  e.target.src = logo22; // fallback
                 }}
                 decoding="async"
                 loading="eager"

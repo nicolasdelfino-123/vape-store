@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Context } from '../js/store/appContext.jsx';
+import sinImagen from '@/assets/sin_imagen.jpg'
+
 
 // --- helpers de sabores ---
 const normalizeFlavor = (s) =>
@@ -79,7 +81,7 @@ const ProductDetail = () => {
     // Galería (usa image_urls si vienen; si no, cae a image_url o placeholder)
     const gallery = Array.isArray(product?.image_urls) && product.image_urls.length
         ? product.image_urls
-        : (product?.image_url ? [product.image_url] : ['/sin_imagen.jpg']);
+        : (product?.image_url ? [product.image_url] : [sinImagen]);
 
     const [activeImg, setActiveImg] = useState(gallery[0]);
 
@@ -192,12 +194,12 @@ const ProductDetail = () => {
 
                         <div className="md:pr-4">
                             <img
-                                src={toAbsUrl(activeImg) || '/sin_imagen.jpg'}
+                                src={toAbsUrl(activeImg) || sinImagen}
                                 alt={product?.name || 'Producto'}
                                 decoding="async"
                                 fetchpriority="high"
                                 className="block w-full h-auto rounded-lg bg-gray-100"
-                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }}
+                                onError={(e) => { e.currentTarget.src = sinImagen }}
                             />
 
                             {gallery.length > 1 && (
@@ -215,7 +217,7 @@ const ProductDetail = () => {
                                                 alt=""
                                                 className="w-16 h-16 object-contain"
                                                 loading="lazy"
-                                                onError={(e) => { e.currentTarget.src = '/sin_imagen.jpg' }}
+                                                onError={(e) => { e.currentTarget.src = sinImagen }}
                                             />
                                         </button>
                                     ))}
