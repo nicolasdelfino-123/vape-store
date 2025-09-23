@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import sinImagen from '@/assets/sin_imagen.jpg'
 
 
 
@@ -310,7 +311,7 @@ export default function AdminProducts() {
                 // Si la principal era la borrada, setear otra, o fallback
                 let nextMain = prev.image_url;
                 if (normalizeImagePath(prev.image_url) === deletedUrl) {
-                    nextMain = nextGallery[0] || "/sin_imagen.jpg"; // fallback visible del frontend
+                    nextMain = nextGallery[0] || { sinImagen }; // fallback visible del frontend
                 }
 
                 return { ...prev, image_urls: nextGallery, image_url: nextMain };
@@ -472,7 +473,7 @@ export default function AdminProducts() {
                         flavors: [],
                         is_active: true,
                         // 👇 DEFAULT DE IMAGEN (ruta servida por tu backend)
-                        image_url: "/sin_imagen.jpg",
+                        image_url: { sinImagen },
                         image_urls: [],
                         puffs: "", // 👈 nuevo campo editable
                     })}
@@ -624,7 +625,7 @@ export default function AdminProducts() {
                                             // 👇 si no tiene imagen cargada, asignamos default
                                             const safeImage = (p.image_url && String(p.image_url).trim())
                                                 ? p.image_url
-                                                : "/public/img/sin_imagen.jpg";
+                                                : sinImagen;
 
                                             setForm({
                                                 ...p,
@@ -879,12 +880,12 @@ export default function AdminProducts() {
                         {/* Preview de imagen (compatible con /public/img/<id>), 1:1 sin recortes */}
                         <div className="mt-2">
                             <img
-                                src={toAbsUrl(form.image_url) || `/sin_imagen.jpg`}
+                                src={toAbsUrl(form.image_url) || sinImagen}
                                 alt="Preview"
                                 className="block w-full h-auto max-h-44 object-contain border rounded"
                                 loading="lazy"
                                 decoding="async"
-                                onError={(e) => { e.currentTarget.src = `/sin_imagen.jpg`; }}
+                                onError={(e) => { e.currentTarget.src = sinImagen; }}
                             />
                         </div>
 
@@ -905,7 +906,7 @@ export default function AdminProducts() {
                                                 className="w-16 h-16 object-contain"
                                                 alt=""
                                                 loading="lazy"
-                                                onError={(e) => { e.currentTarget.src = `/sin_imagen.jpg`; }}
+                                                onError={(e) => { e.currentTarget.src = sinImagen; }}
                                             />
                                         </button>
                                     ))}

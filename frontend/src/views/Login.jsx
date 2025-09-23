@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import { Context } from "../js/store/appContext";
 import { useNavigate } from "react-router-dom";
+import hero from '@/assets/hero-bg.png'
 
 export default function Login() {
     const { actions } = useContext(Context);
@@ -263,7 +264,7 @@ export default function Login() {
             {/* Panel derecho - Imagen */}
             <div className="hidden lg:block lg:w-1/2 relative">
                 <img
-                    src="/hero-bg.png"
+                    src={hero}
                     alt="Vapeadores"
                     className="absolute inset-0 h-full w-full object-cover"
                 />
