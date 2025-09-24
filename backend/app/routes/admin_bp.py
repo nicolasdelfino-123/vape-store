@@ -6,7 +6,7 @@ Este archivo contendrá las rutas administrativas para CRUD de productos
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from app.models import Product, Category, User,ProductImage
+from app.models import Product, Category, User,ProductImage,now_cba_naive
 from flask import current_app, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps # pip install pillow
@@ -97,6 +97,7 @@ def create_product():
             flavor_catalog=catalog,
             flavor_stock_mode=flavor_stock_mode,
             puffs=(int(data['puffs']) if str(data.get('puffs','')).strip().isdigit() else None),
+            created_at=now_cba_naive(),
         )
 
         db.session.add(product)
@@ -326,7 +327,8 @@ def upload_image():
         bytes=optimized_bytes,
         width=width,
         height=height,
-        digest=digest
+        digest=digest,
+        created_at=now_cba_naive(),
     )
     db.session.add(db_image)
     db.session.commit()
