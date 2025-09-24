@@ -5,7 +5,14 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.dialects.postgresql import JSONB
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+AR_TZ = ZoneInfo("America/Argentina/Cordoba")
+
+def now_cba_naive():
+    # datetime naive pero en hora local de Córdoba
+    return datetime.now(AR_TZ).replace(tzinfo=None)
 
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -26,7 +33,7 @@ class User(db.Model):
     shipping_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
 
     role: Mapped[str] = mapped_column(String(10), nullable=False, default="user")
-    last_login: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    last_login: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     is_premium: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
@@ -91,7 +98,7 @@ class Product(db.Model):
     nicotine_mg: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
 
     # Relaciones
     category: Mapped["Category"] = relationship("Category", back_populates="products")
@@ -178,7 +185,7 @@ class ProductImage(db.Model):
     # Para cache/ETag y deduplicación opcional
     digest = db.Column(db.String(64), index=True, nullable=True, unique=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
 
     def serialize(self):
         return {
@@ -198,7 +205,7 @@ class CartItem(db.Model):
     # NUEVO: sabor elegido
     selected_flavor: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
     user: Mapped["User"] = relationship("User")
     product: Mapped["Product"] = relationship("Product", back_populates="cart_items")
 
@@ -226,9 +233,9 @@ class Order(db.Model):
     external_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Referencia externa
     customer_email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email del cliente
     customer_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Nombre del cliente
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-    
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive, onupdate=now_cba_naive)
+
     # Relaciones
     user: Mapped[Optional["User"]] = relationship("User")
     order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
