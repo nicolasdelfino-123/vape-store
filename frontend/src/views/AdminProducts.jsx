@@ -280,49 +280,71 @@ export default function AdminProducts() {
 
     const deleteSelectedImage = async () => {
         if (!form) return;
-        const selectedUrl = form.image_url || "";
-        const imageId = extractImageId(selectedUrl);
-
-        // Solo podemos borrar imágenes servidas por el backend (/public/img/<id>)
-        if (!imageId) {
-            alert("La imagen seleccionada no es una imagen interna (no se puede borrar desde aquí).");
+        if (!form.id) {
+            alert("Primero guardá el producto para poder borrar su imagen.");
             return;
         }
+
+        const selectedUrl = String(form.image_url || "");
+        const imageId = extractImageId(selectedUrl);
 
         if (!confirm("¿Eliminar la foto seleccionada? Esta acción no se puede deshacer.")) return;
 
         try {
-            const res = await fetch(`${API}/admin/images/${imageId}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                alert(`No se pudo eliminar la imagen: ${data?.error || res.statusText}`);
-                return;
-            }
-
-            // Actualizar estado local: sacar la URL borrada de la galería
-            setForm(prev => {
-                if (!prev) return prev;
-                const deletedUrl = `/public/img/${imageId}`;
-                const nextGallery = (prev.image_urls || []).filter(u => normalizeImagePath(u) !== deletedUrl);
-
-                // Si la principal era la borrada, setear otra, o fallback
-                let nextMain = prev.image_url;
-                if (normalizeImagePath(prev.image_url) === deletedUrl) {
-                    nextMain = nextGallery[0] || { sinImagen }; // fallback visible del frontend
+            if (imageId) {
+                // ===== Caso imagen interna (/public/img/<id>): borrar en backend =====
+                const res = await fetch(`${API}/admin/images/${imageId}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    alert(`No se pudo eliminar la imagen: ${data?.error || res.statusText}`);
+                    return;
                 }
 
-                return { ...prev, image_urls: nextGallery, image_url: nextMain };
-            });
+                // Actualizar estado local
+                setForm(prev => {
+                    if (!prev) return prev;
+                    const deletedUrl = `/public/img/${imageId}`;
+                    const nextGallery = (prev.image_urls || []).filter(u => normalizeImagePath(u) !== deletedUrl);
+                    let nextMain = prev.image_url;
+                    if (normalizeImagePath(prev.image_url) === deletedUrl) {
+                        nextMain = nextGallery[0] || sinImagen; // 👈 fallback correcto
+                    }
+                    return { ...prev, image_urls: nextGallery, image_url: nextMain };
+                });
 
+            } else {
+                // ===== Caso imagen externa (scraping, http/https): "borrar" = limpiar campo =====
+                // 1) Actualizar en backend el producto, dejando image_url vacío
+                const res = await fetch(`${API}/admin/products/${form.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ image_url: "" }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    alert(`No se pudo limpiar la imagen: ${data?.error || res.statusText}`);
+                    return;
+                }
+
+                // 2) Actualizar estado local: sacar la URL seleccionada de la galería (si estaba) y poner sinImagen
+                setForm(prev => {
+                    if (!prev) return prev;
+                    const target = normalizeImagePath(selectedUrl);
+                    const nextGallery = (prev.image_urls || []).filter(u => normalizeImagePath(u) !== target);
+                    return { ...prev, image_urls: nextGallery, image_url: sinImagen };
+                });
+            }
         } catch (e) {
             console.error(e);
             alert("Error eliminando la imagen");
         }
     };
-
 
     const shouldShowFlavors = (categoryId) => [1, 3].includes(Number(categoryId))
 
