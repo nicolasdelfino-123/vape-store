@@ -169,7 +169,7 @@ def update_product(product_id):
                     product.stock = int(data['stock'])
                 except Exception:
                     product.stock = 0
-
+        product.created_at = now_cba_naive()
         db.session.commit()
         return jsonify({'message': 'Producto actualizado exitosamente', 'product': product.serialize()}), 200
     except Exception as e:
