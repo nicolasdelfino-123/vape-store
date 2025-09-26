@@ -35,7 +35,7 @@ import AccountDetailsPage from "./views/AccountDetailsPage.jsx";
 import LoginAdmin from "./views/LoginAdmin.jsx";
 import FloatingButtons from "./components/FloatingButtons.jsx";
 import Mayorista from "./views/Mayorista.jsx";
-
+import ThankYou from "./views/ThankYou.jsx";
 // Layout principal que envuelve toda la app
 
 
@@ -100,6 +100,12 @@ const Layout = () => {
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route path="/mayorista" element={<Mayorista />} />
+
+          <Route path="/pago/exitoso" element={<ThankYou />} />
+          <Route path="/pago/fallido" element={<ThankYou />} />
+          <Route path="/pago/pendiente" element={<ThankYou />} />
+          <Route path="/thank-you" element={<ThankYou />} />
+
 
 
           {/* ===== Mi Cuenta con subrutas ===== */}

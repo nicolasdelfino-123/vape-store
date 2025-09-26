@@ -75,6 +75,7 @@ def get_token():
             additional_claims = { "role": role}
 
             access_token = create_access_token(identity=str(user_id), additional_claims=additional_claims, expires_delta=expires)
+
             print(f"LOGIN SUCCESS for user {user_id}")
             return jsonify({ 'access_token':access_token, 'role': role}), 200
 
@@ -245,9 +246,8 @@ def clear_cart():
 @user_bp.route('/orders', methods=['GET'])
 @jwt_required()
 def get_orders():
-    """Obtener órdenes del usuario"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())  # ← Convertir a int
         orders = Order.query.filter_by(user_id=current_user_id).order_by(Order.created_at.desc()).all()
         
         return jsonify([order.serialize() for order in orders]), 200
@@ -354,12 +354,19 @@ def get_order_by_id(order_id):
 @user_bp.route("/me", methods=["GET"])
 @jwt_required()
 def me_get():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    if not user:
-        return jsonify({"error": "Usuario no encontrado"}), 404
-    return jsonify(user.serialize()), 200
-
+    try:
+        current_user_id = int(get_jwt_identity())  # ← Convertir a int
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        return jsonify(user.serialize()), 200
+        
+    except Exception as e:
+        print(f"ERROR en /user/me: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    
 @user_bp.route("/me", methods=["PUT"])
 @jwt_required()
 def me_update():

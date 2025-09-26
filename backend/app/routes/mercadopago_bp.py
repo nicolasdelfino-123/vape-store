@@ -6,6 +6,8 @@ import os
 from datetime import datetime
 from ..models import Order, OrderItem, Product, User
 from ..database import db
+from flask import current_app
+
 
 mercadopago_bp = Blueprint('mercadopago', __name__)
 
@@ -108,33 +110,61 @@ def create_preference():
         # En LOCAL (localhost/127.0.0.1) NO mandamos auto_return (evita 400 invalid_auto_return)
         is_local = ("localhost" in frontend_url) or ("127.0.0.1" in frontend_url)
 
+        # referencia propia para trazar (si tenés user_id úsalo; si no, timestamp)
+        external_ref = str(user_id or int(datetime.utcnow().timestamp()))
+
         preference_data = {
             "items": items,
             "payer": payer_out,
             "binary_mode": True,
-            # "external_reference": str(user_id or ""),  # opcional
+            "external_reference": external_ref,
+            # 👇 Enviamos los items también en additional_info
+            "additional_info": {
+                "items": [
+                    {
+                        "id": it["id"],
+                        "title": it["title"],
+                        "quantity": it["quantity"],
+                        "unit_price": it["unit_price"]
+                    } for it in items
+                ]
+            },
         }
 
-        # back_urls siempre ayudan (aunque en local MP no pueda volver)
+        # back_urls (MP te redirige con ?status=approved|pending|failure)
         preference_data["back_urls"] = {
-            "success": f"{frontend_url}/pago/exitoso",
-            "failure": f"{frontend_url}/pago/fallido",
-            "pending": f"{frontend_url}/pago/pendiente",
+            "success": f"{frontend_url}/thank-you?status=approved",
+            "failure": f"{frontend_url}/thank-you?status=failure", 
+            "pending": f"{frontend_url}/thank-you?status=pending",
         }
 
         # Solo en dominio público/producción habilitamos auto_return
         if not is_local:
             preference_data["auto_return"] = "approved"
 
-        # Webhook si tenés URL pública
+        # 🔥 WEBHOOK CON PROXY: usa /api porque Vite redirige al backend
         if backend_public:
             preference_data["notification_url"] = f"{backend_public}/api/mercadopago/webhook"
+            print(f"✅ Webhook configurado: {preference_data['notification_url']}")
 
         print(f"Preference data final: {preference_data}")
 
         # Crear preferencia
         sdk = get_mp_sdk()
         print("SDK inicializado correctamente")
+        
+        # Si es local y tenés un túnel (por ejemplo ngrok), podés definir BACKEND_PUBLIC_URL en .env
+        dev_tunnel = os.getenv('BACKEND_PUBLIC_URL', '').rstrip('/')
+        if is_local and dev_tunnel:
+            # 👉 permite testear redirección en localhost con túnel
+            preference_data["auto_return"] = "approved"
+            # fuerza back_urls con el túnel (no solo localhost)
+            preference_data["back_urls"] = {
+                "success": f"{dev_tunnel}/thank-you?status=approved",
+                "failure": f"{dev_tunnel}/thank-you?status=failure",
+                "pending": f"{dev_tunnel}/thank-you?status=pending",
+            }
+            
         preference_response = sdk.preference().create(preference_data)
         print(f"MP Response completa: {preference_response}")
 
@@ -179,72 +209,178 @@ def create_preference():
 # =========================================================
 #  WEBHOOK
 # =========================================================
-@mercadopago_bp.route('/webhook', methods=['POST'])
+@mercadopago_bp.route('/webhook', methods=['POST', 'GET'])
 def webhook():
     """Webhook para notificaciones de MercadoPago"""
     try:
-        data = request.get_json()
-        print(f"Webhook recibido: {data}")
+        # MP puede enviar data por query params o JSON body
+        data = request.get_json() or {}
+        payment_id = data.get('data', {}).get('id') or request.args.get('data.id') or request.args.get('id')
+        notification_type = data.get('type') or request.args.get('type') or request.args.get('topic')
+        
+        print(f"📥 WEBHOOK RECIBIDO")
+        print(f"   Query params: {dict(request.args)}")
+        print(f"   Payment ID: {payment_id}")
+        print(f"   Type: {notification_type}")
 
-        # Verificar que sea una notificación de pago
-        if data.get('type') == 'payment':
-            payment_id = data.get('data', {}).get('id')
-
-            if payment_id:
-                # Obtener información del pago
-                sdk = get_mp_sdk()
-                payment_response = sdk.payment().get(payment_id)
+        # Solo procesar tipo 'payment'
+        if notification_type == 'payment' and payment_id:
+            print(f"💳 Consultando pago {payment_id}...")
+            
+            sdk = get_mp_sdk()
+            payment_response = sdk.payment().get(payment_id)
+            
+            if payment_response.get("status") == 200:
                 payment = payment_response.get("response")
-
-                if payment_response.get("status") == 200 and payment:
-                    # Procesar el pago según su estado
-                    status = payment.get('status')
-                    external_reference = payment.get('external_reference')
-                    print(f"Payment {payment_id} status: {status}")
-
-                    if status == 'approved':
-                        # Pago aprobado - crear orden en la base de datos
-                        create_order_from_payment(payment)
+                print(f"✅ Pago obtenido: Status={payment.get('status')}")
+                
+                if payment.get('status') == 'approved':
+                    # 🔥 SOLUCIÓN: Ejecutar en background sin app_context
+                    create_order_from_payment(payment)
+            else:
+                print(f"❌ Error consultando pago: {payment_response}")
+        else:
+            print(f"⚠️ Webhook ignorado (type={notification_type})")
 
         return jsonify({'status': 'ok'}), 200
 
     except Exception as e:
-        print(f"Webhook error: {str(e)}")
-        return jsonify({'error': 'Error procesando webhook'}), 500
+        import traceback
+        print(f"💥 ERROR EN WEBHOOK: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+@mercadopago_bp.route('/auto-login/<payment_id>', methods=['POST'])
+def auto_login_by_payment(payment_id):
+    """Auto-login temporal después de pago exitoso"""
+    try:
+        from flask_jwt_extended import create_access_token
+        from datetime import timedelta
+        
+        print(f"🔐 Intentando auto-login para payment_id: {payment_id}")
+        
+        # Buscar orden por payment_id
+        order = Order.query.filter_by(payment_id=str(payment_id)).first()
+        
+        if not order:
+            print(f"❌ Orden no encontrada para payment_id: {payment_id}")
+            return jsonify({'error': 'Orden no encontrada'}), 404
+        
+        if not order.user_id:
+            print(f"❌ Orden {order.id} sin user_id")
+            return jsonify({'error': 'Usuario no asociado'}), 404
+        
+        # Generar token temporal (1 hora)
+        token = create_access_token(
+            identity=str(order.user_id),  # 👈 evitar 422: 'sub' debe ser string
+            expires_delta=timedelta(hours=1)
+        )
+
+        
+        user = User.query.get(order.user_id)
+        
+        print(f"✅ Token generado para usuario {user.id} ({user.email})")
+        
+        return jsonify({
+            'token': token,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name
+            }
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"💥 Error en auto_login: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+    
 
 
 def create_order_from_payment(payment_data):
-    """Crear orden en la base de datos desde un pago aprobado"""
+    """Crear orden + items y descontar stock - VERSIÓN QUE FUNCIONA"""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    
+    # Crear sesión independiente
+    engine = create_engine(os.getenv('SQLALCHEMY_DATABASE_URI'))
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
     try:
-        external_reference = payment_data.get('external_reference', '')
-        payer_email = payment_data.get('payer', {}).get('email')
+        payment_id = str(payment_data.get('id'))
+        if payment_data.get('status') != 'approved':
+            return
 
-        # Buscar usuario por email (opcional)
-        user = User.query.filter_by(email=payer_email).first()
+        # Idempotencia
+        if session.query(Order).filter_by(payment_id=payment_id).first():
+            return
 
-        # Crear nueva orden
+        payer = payment_data.get('payer') or {}
+        payer_email = payer.get('email')
+        full_name = f"{payer.get('first_name', '')} {payer.get('last_name', '')}".strip() or 'Cliente'
+        mp_address = (payer.get('address') or {}).get('street_name', 'Retiro en tienda')
+
+        # Usuario
+        user = session.query(User).filter_by(email=payer_email).first()
+        if not user and payer_email:
+            from werkzeug.security import generate_password_hash
+            user = User(
+                email=payer_email,
+                password=generate_password_hash('temp123'),  # Hash más corto
+                name=full_name,
+                shipping_address={"address": mp_address},
+                is_active=True
+            )
+            session.add(user)
+            session.flush()
+            print(f"👤 Usuario: {user.email} (ID: {user.id})")
+
+        # Orden
         order = Order(
             user_id=user.id if user else None,
-            total_amount=payment_data.get('transaction_amount', 0),
+            total_amount=float(payment_data.get('transaction_amount', 0)),
             status='paid',
             payment_method='mercadopago',
-            payment_id=str(payment_data.get('id')),
-            external_reference=external_reference,
-            customer_email=payer_email,
-            customer_name=f"{payment_data.get('payer', {}).get('first_name', '')} {payment_data.get('payer', {}).get('last_name', '')}".strip(),
-            shipping_address=payment_data.get('payer', {}).get('address', {}).get('street_name', ''),
+            payment_id=payment_id,
+            external_reference=payment_data.get('external_reference', ''),
+            customer_email=payer_email or '',
+            customer_name=full_name,
+            shipping_address=mp_address,
             created_at=datetime.utcnow()
         )
+        session.add(order)
+        session.flush()
+        print(f"📦 Orden #{order.id}")
 
-        db.session.add(order)
-        db.session.commit()
+        # Items
+        items = (payment_data.get("additional_info") or {}).get("items") or []
+        for it in items:
+            if not str(it.get("id", "")).isdigit():
+                continue
+            
+            pid = int(it["id"])
+            qty = int(it.get("quantity", 1))
+            
+            session.add(OrderItem(
+                order_id=order.id,
+                product_id=pid,
+                quantity=qty,
+                price=float(it.get("unit_price", 0))
+            ))
+            
+            product = session.query(Product).get(pid)
+            if product:
+                product.stock = max(0, (product.stock or 0) - qty)
+                print(f"  Stock #{pid}: {product.stock}")
 
-        print(f"Order created successfully: {order.id}")
+        session.commit()
+        print(f"✅ Orden #{order.id} OK")
 
     except Exception as e:
-        print(f"Error creating order: {str(e)}")
-        db.session.rollback()
-
+        session.rollback()
+        print(f"💥 {e}")
+    finally:
+        session.close()
 
 # =========================================================
 #  CONSULTAR UN PAGO

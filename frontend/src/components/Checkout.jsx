@@ -215,8 +215,12 @@ const Checkout = () => {
                 if (!Number.isFinite(price) || price <= 0) {
                     throw new Error(`Precio inválido para ${item.name}`)
                 }
+                const productId = item.product_id ?? item.id; // asegúrate de tener uno real en el cart
+                if (!productId) {
+                    throw new Error(`Falta product_id para ${item.name}`);
+                }
                 return {
-                    id: String(item.id ?? item.sku ?? Math.random()),
+                    id: String(productId),           // 👈 SIEMPRE el id de Product
                     title: item.name,
                     quantity: qty,
                     unit_price: price,

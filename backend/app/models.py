@@ -17,7 +17,8 @@ def now_cba_naive():
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(String(60), nullable=False)
+   
+    password = db.Column(db.String(255), nullable=False)  # En vez de 60
     name: Mapped[str] = mapped_column(String(60), nullable=False)
     phone: Mapped[str] = mapped_column(String(40), nullable=True)
 

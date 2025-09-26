@@ -27,31 +27,32 @@ export default function Dashboard() {
     const { store, actions } = useContext(Context);
     const [activeSection, setActiveSection] = useState("dashboard");
 
-    // Cargar datos al inicio y hidratar sesión
     useEffect(() => {
-        if (actions.fetchOrders) actions.fetchOrders();
-        if (actions.fetchUserAddress) actions.fetchUserAddress();
-        // 🔥 CRÍTICO: Hidratar sesión al cargar el dashboard
-        if (actions.hydrateSession && !store.user) actions.hydrateSession();
-    }, []);
+        const initDashboard = async () => {
+            console.log("📊 Inicializando Dashboard...");
 
-    // Datos de ejemplo
-    const sampleOrders = [
-        {
-            id: 28816,
-            created_at: "2025-04-02T10:00:00Z",
-            status: "Completado",
-            total_amount: 70500,
-            order_items: [
-                { product_name: "Sales EVIL 25mg 30ml - LA MONJA ICE", quantity: 1, price: 11000 },
-                { product_name: "Sales EVIL 25mg 30ml - BABAOOK ICE", quantity: 1, price: 11000 },
-                { product_name: "Descartable Ignite V250 2500 Puffs - PINEAPPLE MANGO", quantity: 1, price: 35000 },
-                { product_name: "SPOK LP1 Resistencia 0.8 Ohm Mesh MTL", quantity: 2, price: 11000 },
-            ],
-        }
-    ];
+            // Hidratar sesión primero
+            if (!store.user && actions.hydrateSession) {
+                await actions.hydrateSession();
+            }
 
-    const recentOrders = store.orders?.length > 0 ? store.orders.slice(0, 3) : sampleOrders;
+            // Cargar órdenes
+            if (actions.fetchOrders) {
+                await actions.fetchOrders();
+            }
+
+            // Cargar direcciones
+            if (actions.fetchUserAddresses) {
+                await actions.fetchUserAddresses();
+            }
+
+            console.log("✅ Dashboard inicializado");
+        };
+
+        initDashboard();
+    }, []); // Solo ejecuta al montar
+
+    const recentOrders = store.orders?.length > 0 ? store.orders.slice(0, 3) : [];
 
     // Vista principal del dashboard
     if (activeSection === "dashboard") {
@@ -88,7 +89,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-gray-900">Pedidos Recientes</h2>
                         <Link
-                            to="/cuenta/pedidos"
+                            to="/cuenta"
                             className="text-sm text-purple-600 hover:text-purple-700"
                         >
                             Ver todos
@@ -96,40 +97,49 @@ export default function Dashboard() {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="text-left border-b">
-                                <tr className="text-gray-700">
-                                    <th className="py-3 pr-4">PEDIDO</th>
-                                    <th className="py-3 pr-4">FECHA</th>
-                                    <th className="py-3 pr-4">ESTADO</th>
-                                    <th className="py-3 pr-4">TOTAL</th>
-                                    <th className="py-3 pr-2 text-right">ACCIONES</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentOrders.slice(0, 3).map((o) => (
-                                    <tr key={o.id} className="border-b last:border-0">
-                                        <td className="py-3 pr-4">
-                                            <span className="text-gray-900 font-semibold">#{o.id}</span>
-                                        </td>
-                                        <td className="py-3 pr-4">{dateAR(o.created_at)}</td>
-                                        <td className="py-3 pr-4">{o.status}</td>
-                                        <td className="py-3 pr-4">
-                                            <span className="font-semibold text-green-600">{moneyAR(o.total_amount)}</span>
-                                            <span className="text-gray-500"> para {o.order_items?.length || 0} artículos</span>
-                                        </td>
-                                        <td className="py-3 pr-2 text-right">
-                                            <Link
-                                                to={`/cuenta/pedidos/${o.id}`}
-                                                className="inline-block px-3 py-1 bg-lime-600 hover:bg-lime-700 text-white rounded-md"
-                                            >
-                                                VER
-                                            </Link>
-                                        </td>
+                        {recentOrders.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <p>No tenés pedidos aún</p>
+                                <Link to="/inicio" className="text-purple-600 underline mt-2 inline-block">
+                                    Ver productos
+                                </Link>
+                            </div>
+                        ) : (
+                            <table className="min-w-full text-sm">
+                                <thead className="text-left border-b">
+                                    <tr className="text-gray-700">
+                                        <th className="py-3 pr-4">PEDIDO</th>
+                                        <th className="py-3 pr-4">FECHA</th>
+                                        <th className="py-3 pr-4">ESTADO</th>
+                                        <th className="py-3 pr-4">TOTAL</th>
+                                        <th className="py-3 pr-2 text-right">ACCIONES</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {recentOrders.map((o) => (
+                                        <tr key={o.id} className="border-b last:border-0">
+                                            <td className="py-3 pr-4">
+                                                <span className="text-gray-900 font-semibold">#{o.id}</span>
+                                            </td>
+                                            <td className="py-3 pr-4">{dateAR(o.created_at)}</td>
+                                            <td className="py-3 pr-4">{o.status}</td>
+                                            <td className="py-3 pr-4">
+                                                <span className="font-semibold text-green-600">{moneyAR(o.total_amount)}</span>
+                                                <span className="text-gray-500"> para {o.order_items?.length || 0} artículos</span>
+                                            </td>
+                                            <td className="py-3 pr-2 text-right">
+                                                <Link
+                                                    to={`/cuenta/pedidos/${o.id}`}
+                                                    className="inline-block px-3 py-1 bg-lime-600 hover:bg-lime-700 text-white rounded-md"
+                                                >
+                                                    VER
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
 
