@@ -4,17 +4,19 @@ import sinImagen from '@/assets/sin_imagen.jpg'
 
 
 // ----- Helpers de categorías -----
+// ----- Helpers de categorías -----
 const CATEGORY_NAME_TO_ID = {
     "Vapes Desechables": 1,
-    "Pods": 2,
+    "Pods Recargables": 2,   // 👈 antes "Pods"
     "Líquidos": 3,
-    "Accesorios": 4,
+    "Resistencias": 4,       // 👈 antes "Accesorios"
     "Celulares": 5,
     "Perfumes": 6,
-}
+};
 const ID_TO_CATEGORY_NAME = Object.fromEntries(
     Object.entries(CATEGORY_NAME_TO_ID).map(([k, v]) => [v, k])
-)
+);
+
 function mapCategoryId(name) {
     const n = (name || "").toLowerCase()
     if (n.includes("desech")) return 1
@@ -211,7 +213,7 @@ const noSpin = {
 // ----- Componente principal -----
 export default function AdminProducts() {
     const [products, setProducts] = useState([])
-    const [categories] = useState(["Vapes Desechables", "Pods", "Líquidos", "Accesorios", "Celulares", "Perfumes"])
+    const [categories] = useState(["Vapes Desechables", "Pods Recargables", "Líquidos", "Resistencias", "Celulares", "Perfumes"])
     const [form, setForm] = useState(null)
     const [q, setQ] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("Todos")
@@ -446,10 +448,17 @@ export default function AdminProducts() {
 
     const filtered = products.filter((p) => {
         const matchesSearch =
-            !q || p.name?.toLowerCase().includes(q.toLowerCase()) || p.brand?.toLowerCase().includes(q.toLowerCase())
-        const matchesCategory = selectedCategory === "Todos" || p.category_name === selectedCategory
-        return matchesSearch && matchesCategory
-    })
+            !q ||
+            p.name?.toLowerCase().includes(q.toLowerCase()) ||
+            p.brand?.toLowerCase().includes(q.toLowerCase());
+
+        const matchesCategory =
+            selectedCategory === "Todos" ||
+            ID_TO_CATEGORY_NAME[p.category_id] === selectedCategory; // 👈
+
+        return matchesSearch && matchesCategory;
+    });
+
 
     // 👇 Sincroniza el stock general cuando el modo por sabor está activo
     useEffect(() => {
@@ -610,7 +619,7 @@ export default function AdminProducts() {
                                         : p.stock}
                                 </td>
 
-                                <td className="p-2 text-center">{p.category_name}</td>
+                                <td className="p-2 text-center">{ID_TO_CATEGORY_NAME[p.category_id]}</td>
                                 <td className="p-2 text-center">
                                     {p.flavor_enabled ? (
                                         <span
@@ -957,9 +966,9 @@ export default function AdminProducts() {
                         >
                             <option value="">Selecciona categoría</option>
                             <option value={1}>Vapes Desechables</option>
-                            <option value={2}>Pods</option>
+                            <option value={2}>Pods Recargables</option>
                             <option value={3}>Líquidos</option>
-                            <option value={4}>Accesorios</option>
+                            <option value={4}>Resistencias</option>
                             <option value={5}>Celulares</option>
                             <option value={6}>Perfumes</option>
                         </select>

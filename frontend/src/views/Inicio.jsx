@@ -240,7 +240,11 @@ function Inicio() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
                         {/* PODS RECARGABLES */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        <Link
+                            to="/categoria/pods-recargables"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Pods Recargables"
+                        >
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
                                 style={{ backgroundImage: `url(${recargables})` }}
@@ -249,20 +253,22 @@ function Inicio() {
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-center">
                                 <div className="px-5">
-                                    <Link to="/categoria/pods-recargables" className="inline-block" aria-label="Ir a Pods Recargables">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            PODS<br />RECARGABLES
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/pods-recargables" className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                        PODS<br />RECARGABLES
+                                    </h3>
+                                    <span className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* CELULARES */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        <Link
+                            to="/categoria/celulares"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Celulares"
+                        >
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
                                 style={{ backgroundImage: `url(${celu})` }}
@@ -271,20 +277,22 @@ function Inicio() {
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-start">
                                 <div className="px-5 py-4 flex flex-col gap-2 h-full">
-                                    <Link to="/categoria/celulares" className="block" aria-label="Ir a Celulares">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            CELULARES
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/celulares" className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                        CELULARES
+                                    </h3>
+                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
-                        {/* PODS DESCARTABLES */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        {/* VAPES DESECHABLES */}
+                        <Link
+                            to="/categoria/vapes-desechables"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Vapes Desechables"
+                        >
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
                                 style={{ backgroundImage: `url(${desechables})` }}
@@ -293,20 +301,22 @@ function Inicio() {
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-center">
                                 <div className="px-5">
-                                    <Link to="/categoria/pods-descartables" className="inline-block" aria-label="Ir a Pods Descartables">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            PODS<br />DESCARTABLES
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/pods-descartables" className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                        VAPES<br />DESECHABLES
+                                    </h3>
+                                    <span className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* PERFUMES */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        <Link
+                            to="/categoria/perfumes"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Perfumes"
+                        >
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
                                 style={{ backgroundImage: `url(${perfumes})` }}
@@ -315,43 +325,46 @@ function Inicio() {
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-start">
                                 <div className="px-5 py-4 flex flex-col gap-2">
-                                    <Link to="/categoria/perfumes" className="block" aria-label="Ir a Perfumes">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            PERFUMES
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/perfumes" className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                        PERFUMES
+                                    </h3>
+                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
-                        {/* ACCESORIOS */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        {/* RESISTENCIAS */}
+                        <Link
+                            to="/categoria/resistencias"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Resistencias"
+                        >
                             <div
-
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: `url(${accesorios})` }}
+                                style={{ backgroundImage: `url(${accesorios})` }} /* podés cambiar a una imagen “resistencias” */
                                 aria-hidden
                             />
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-start">
                                 <div className="px-5 py-4 flex flex-col gap-2">
-                                    <Link to="/categoria/accesorios" className="block" aria-label="Ir a Accesorios">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            ACCESORIOS
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/accesorios" className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                        RESISTENCIAS
+                                    </h3>
+                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* LÍQUIDOS */}
-                        <div className="group relative rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36">
+                        <Link
+                            to="/categoria/liquidos"
+                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            aria-label="Ir a Líquidos"
+                        >
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
                                 style={{ backgroundImage: `url(${liquidos})` }}
@@ -360,21 +373,20 @@ function Inicio() {
                             <div className="absolute inset-0 bg-black/20" aria-hidden />
                             <div className="relative h-full flex items-start">
                                 <div className="px-5 py-4 flex flex-col gap-2">
-                                    <Link to="/categoria/liquidos" className="block" aria-label="Ir a Líquidos">
-                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                            LÍQUIDOS
-                                        </h3>
-                                    </Link>
-                                    <Link to="/categoria/liquidos" className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2_#0004]">
+                                        LÍQUIDOS
+                                    </h3>
+                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
                                         VER
-                                    </Link>
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                     </div>
                 </div>
             </section>
+
 
 
             {/* Products Section */}

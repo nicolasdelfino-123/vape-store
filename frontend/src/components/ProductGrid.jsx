@@ -25,10 +25,22 @@ const SLUG_TO_NAME = {
   "vapes-desechables": "Vapes Desechables",
   "pods-recargables": "Pods Recargables",
   "liquidos": "Líquidos",
-  "accesorios": "Accesorios",
+  "resistencias": "Resistencias",
   "celulares": "Celulares",
   "perfumes": "Perfumes",
-}
+};
+
+const SLUG_TO_ID = {
+  "vapes-desechables": 1,
+  "pods-recargables": 2,
+  "liquidos": 3,
+  "resistencias": 4,
+  "celulares": 5,
+  "perfumes": 6,
+};
+
+
+
 
 // 👇 pega esto cerca de SLUG_TO_NAME
 const normalizeBrand = (b = "") =>
@@ -62,8 +74,10 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const restoredRef = useRef(false);
   const isInitialMount = useRef(true);
 
-  const currentSlug = slug
-  const currentCategoryName = category || (currentSlug ? SLUG_TO_NAME[currentSlug] : null)
+  const currentSlug = slug;
+  const currentCategoryId = currentSlug ? SLUG_TO_ID[currentSlug] : null;
+
+
 
   useEffect(() => {
     if (actions?.fetchProducts) actions.fetchProducts()
@@ -111,11 +125,12 @@ export default function ProductGrid({ category, hideFilters = false }) {
   }, [slug, category, storageKey]);
 
   const categoryProducts = useMemo(() => {
-    const products = store.products || []
-    if (hideFilters && !currentCategoryName) return products.slice(0, 12)
-    if (!currentCategoryName) return products
-    return products.filter(p => p.category_name === currentCategoryName)
-  }, [store.products, currentCategoryName, slug, category, hideFilters])
+    const products = store.products || [];
+    if (hideFilters && !currentCategoryId) return products.slice(0, 12);
+    if (!currentCategoryId) return products;
+    return products.filter(p => Number(p.category_id) === Number(currentCategoryId));
+  }, [store.products, currentCategoryId, slug, category, hideFilters]);
+
 
   // 👇 NUEVO: marcas disponibles con contador
   const brandOptions = useMemo(() => {
@@ -283,7 +298,10 @@ export default function ProductGrid({ category, hideFilters = false }) {
     }
   }
 
-  const pageTitle = category || currentCategoryName || "Todos los Productos"
+  const pageTitle = currentCategoryId
+    ? (SLUG_TO_NAME?.[currentSlug] || "Todos los Productos")
+    : (category || "Todos los Productos");
+
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -293,7 +311,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
           {pageTitle}
         </h1>
         <p className="text-sm sm:text-base text-gray-600">
-          {filteredProducts.length} productos{currentCategoryName ? ` en ${pageTitle}` : ""}
+          {filteredProducts.length} productos{currentCategoryId ? ` en ${pageTitle}` : ""}
         </p>
       </div>
 

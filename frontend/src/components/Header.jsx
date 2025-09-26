@@ -93,7 +93,7 @@ export default function Header() {
     { name: "Líquidos", route: "/categoria/liquidos", icon: "💧" },
     { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
     { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
-    { name: "Accesorios", route: "/categoria/accesorios", icon: "⚙️" },
+    { name: "Resistencias", route: "/categoria/resistencias", icon: "🌀" },
     { name: "Celulares", route: "/categoria/celulares", icon: "📱" },
   ];
 
