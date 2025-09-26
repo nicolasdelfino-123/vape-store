@@ -220,6 +220,9 @@ export default function AdminProducts() {
     // antes: const imgInputRef = useRef(null);
     const mainImgInputRef = useRef(null);
     const galImgInputRef = useRef(null);
+    const [editingPriceId, setEditingPriceId] = useState(null);
+    const [editingPrice, setEditingPrice] = useState("");
+
 
 
     // Importación masiva
@@ -248,6 +251,48 @@ export default function AdminProducts() {
     useEffect(() => {
         fetchAll()
     }, [])
+
+    const startEditPrice = (p) => {
+        setEditingPriceId(p.id);
+        // mantengo como string lo que ve el usuario
+        setEditingPrice(String(p.price ?? ""));
+    };
+
+    const cancelEditPrice = () => {
+        setEditingPriceId(null);
+        setEditingPrice("");
+    };
+
+    const confirmEditPrice = async () => {
+        if (!editingPriceId) return;
+        const newPriceNum = Number(editingPrice);
+        if (!Number.isFinite(newPriceNum) || newPriceNum < 0) {
+            alert("Precio inválido");
+            return;
+        }
+        try {
+            const res = await fetch(`${API}/admin/products/${editingPriceId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ price: newPriceNum }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(`No se pudo actualizar el precio: ${data?.error || res.statusText}`);
+                return;
+            }
+            // Refrescar rápido en memoria sin romper nada más
+            setProducts((prev) => prev.map((x) => x.id === editingPriceId ? { ...x, price: newPriceNum } : x));
+            cancelEditPrice();
+        } catch (e) {
+            console.error(e);
+            alert("Error actualizando el precio");
+        }
+    };
+
 
     const uploadImage = async (file, { asMain = false } = {}) => {
         try {
@@ -612,7 +657,54 @@ export default function AdminProducts() {
                                         {p.short_description || "Sin descripción breve"}
                                     </div>
                                 </td>
-                                <td className="p-2 text-center">${p.price}</td>
+                                <td className="p-2">
+                                    {editingPriceId === p.id ? (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <input
+                                                className="w-24 border rounded px-2 py-1 text-right"
+                                                type="number"
+                                                step="0.01"
+                                                inputMode="decimal"
+                                                {...noSpin}
+                                                autoFocus
+                                                value={editingPrice}
+                                                onChange={(e) => setEditingPrice(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") confirmEditPrice();
+                                                    if (e.key === "Escape") cancelEditPrice();
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="px-2 py-1 border rounded hover:bg-green-50"
+                                                title="Guardar"
+                                                onClick={confirmEditPrice}
+                                            >
+                                                ✅
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="px-2 py-1 border rounded hover:bg-gray-50"
+                                                title="Cancelar"
+                                                onClick={cancelEditPrice}
+                                            >
+                                                ❌
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <span className="tabular-nums">${p.price}</span>
+                                            <button
+                                                type="button"
+                                                className="px-2 py-1 border rounded hover:bg-gray-50"
+                                                title="Editar precio"
+                                                onClick={() => startEditPrice(p)}
+                                            >
+                                                ✏️
+                                            </button>
+                                        </div>
+                                    )}
+                                </td>
                                 <td className="p-2 text-center">
                                     {form && form.id === p.id && form.flavor_stock_mode
                                         ? sumActiveFlavorStock(form.flavor_catalog || [])
