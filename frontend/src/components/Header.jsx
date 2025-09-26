@@ -2,7 +2,7 @@ import { useState, useContext, useEffect, useRef } from "react";
 import { Context } from "../js/store/appContext.jsx";
 import Cart from "../components/Cart.jsx";
 import AccountDropdown from "../components/AccountDropdown.jsx";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from '@/assets/logo.png'
 import logo22 from '@/assets/logo-22.png'
 
@@ -13,6 +13,14 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [productsDropdownOpen, setProductsDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchBoxRef = useRef(null);
+
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileSearchTerm, setMobileSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+
+
 
   // Referencias para el dropdown
   const productsDropdownRef = useRef(null);
@@ -85,6 +93,27 @@ export default function Header() {
     };
   }, []);
 
+  // Cerrar y limpiar búsqueda cuando cambia la ruta
+  useEffect(() => {
+    setMobileSearchOpen(false);
+    setMobileSearchTerm("");
+    setSearchResults([]);
+  }, [location.pathname]);
+
+  // Cerrar si clickean fuera del cuadro de búsqueda / resultados
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (mobileSearchOpen && searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setMobileSearchOpen(false);
+        setMobileSearchTerm("");
+        setSearchResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileSearchOpen]);
+
+
   const cartItemsCount = (store.cart || []).reduce((t, i) => t + (i.quantity || 0), 0);
 
   // Categorías para el dropdown (coinciden con las del backend)
@@ -131,6 +160,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={["flex justify-between items-center", isScrolled ? "h-14 py-1" : "h-16 py-3"].join(" ")}>
+
           {/* Mobile hamburger menu - left */}
           <div className="md:hidden">
             <button
@@ -243,6 +273,21 @@ export default function Header() {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4 text-white ml-8">
             <AccountDropdown />
+            {/* Lupa Desktop */}
+
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(v => !v)}   // <-- CAMBIO: antes tenías navigate("/busqueda")
+              className="hover:text-purple-400 transition-colors bg-transparent border-0 p-0"
+              aria-label="Buscar productos"
+              title="Buscar"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
 
             {/* Carrito Desktop */}
             <button
@@ -265,6 +310,22 @@ export default function Header() {
 
           {/* Mobile cart - right */}
           <div className="md:hidden">
+            {/* Mobile Search Icon (solo móvil) */}
+            {/* Mobile Search Box */}
+
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              className="relative hover:text-purple-400 transition-colors bg-transparent border-0 p-0 text-white mr-4 md:hidden"
+              aria-label="Buscar productos"
+              title="Buscar"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
             <button
               type="button"
               onClick={() => setCartOpen(true)}
@@ -283,6 +344,81 @@ export default function Header() {
             </button>
           </div>
         </div>
+        {/* Search Box (desktop + mobile) */}
+        {mobileSearchOpen && (
+          <div className="bg-gray-1000 p-3 z-50">
+            <div className="flex justify-end px-4 sm:px-6 lg:px-8">
+              <div className="relative w-full max-w-md" ref={searchBoxRef}>
+                <div className="flex">
+                  <input
+                    type="text"
+                    value={mobileSearchTerm}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      setMobileSearchTerm(val);
+                      if (!store.products || store.products.length === 0) {
+                        await actions.fetchProducts();
+                      }
+                      setSearchResults(actions.searchProductsQuick(val));
+                    }}
+                    placeholder="Buscar productos..."
+                    className="w-full max-w-md p-2 pr-9 rounded-md text-black focus:outline-none"
+                    autoFocus
+                  />
+
+                  {/* Botón X (limpiar/cerrar) */}
+                  {mobileSearchOpen && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileSearchTerm("");
+                        setSearchResults([]);
+                        setMobileSearchOpen(false);
+                      }}
+                      aria-label="Cerrar búsqueda"
+                      className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                      title="Cerrar"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+
+                {/* 👇 Caja de resultados: Pegar aquí, dentro del max-w-7xl */}
+                {searchResults.length > 0 && (
+                  <div className="absolute top-full w-full mt-1 max-w-md bg-white rounded-lg shadow-lg max-h-80 overflow-y-auto z-50">
+
+                    {searchResults.map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          navigate(`/product/${p.id}`);
+                          setMobileSearchOpen(false);
+                        }}
+                        className="flex items-center p-3 hover:bg-gray-300 cursor-pointer border-b border-gray-200 last:border-b-0"
+                      >
+                        <img
+                          src={p.image_url || "/sinImagen.jpg"}
+                          alt={p.name}
+                          className="w-12 h-12 object-contain rounded mr-3"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-800">{p.name}</div>
+                          <div className="text-green-600 font-bold text-sm">
+                            ${Number(p.price).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 👆 Fin caja de resultados */}
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Mobile Menu */}
         {isMenuOpen && (

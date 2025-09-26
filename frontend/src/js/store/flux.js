@@ -17,6 +17,8 @@ const getState = ({ getStore, getActions, setStore }) => {
 			billingAddress: null,   // ← NUEVO: JSON de facturación
 			shippingAddress: null,  // ← NUEVO: JSON de envío
 			dni: "",
+			productSearch: "",
+
 
 			// Toast notifications
 			toast: {
@@ -117,6 +119,23 @@ const getState = ({ getStore, getActions, setStore }) => {
 				return
 			},
 
+			searchProducts: (query) => {
+				const store = getStore();
+				setStore({ ...store, productSearch: query });
+			},
+
+			searchProductsQuick: (query) => {
+				const store = getStore();
+				const q = query.toLowerCase();
+				if (!q) return [];
+				return (store.products || []).filter(
+					p =>
+						p.name?.toLowerCase().includes(q) ||
+						p.brand?.toLowerCase().includes(q)
+				);
+			},
+
+
 			demoFunction: async () => {
 				const urlAboutPublic = backendUrl + '/public/demo';
 				const store = getStore();
@@ -186,7 +205,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 						return { success: false, error: errorData.error || "Login fallido" };
 					}
 					const data = await response.json();
-					console.log("esta es la data", data)
+
 					if (data.access_token) {
 						localStorage.setItem("token", data.access_token);
 

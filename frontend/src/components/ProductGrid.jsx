@@ -55,7 +55,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
   const { slug } = useParams()
   const { store, actions } = useContext(Context)
 
-  const [searchTerm, setSearchTerm] = useState("")
+
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity })
   // 👇 NUEVO: selección de marcas
   const [selectedBrands, setSelectedBrands] = useState([]) // ej: ["ignite","elfbar"]
@@ -76,7 +76,9 @@ export default function ProductGrid({ category, hideFilters = false }) {
 
   const currentSlug = slug;
   const currentCategoryId = currentSlug ? SLUG_TO_ID[currentSlug] : null;
-
+// usamos la búsqueda global del flux
+  const searchTerm = store.productSearch || "";
+  const setSearchTerm = (val) => actions.searchProducts(val);
 
 
   useEffect(() => {
