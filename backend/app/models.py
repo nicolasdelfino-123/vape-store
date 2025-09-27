@@ -230,7 +230,7 @@ class Order(db.Model):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, paid, confirmed, shipped, delivered, cancelled
     shipping_address: Mapped[str] = mapped_column(String(200), nullable=False)
     payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
-    payment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # ID del pago en MercadoPago
+    payment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, unique=True, index=True)  # ID del pago en MercadoPago
     external_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Referencia externa
     customer_email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email del cliente
     customer_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Nombre del cliente

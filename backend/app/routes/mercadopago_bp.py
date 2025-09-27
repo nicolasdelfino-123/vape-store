@@ -7,9 +7,137 @@ from datetime import datetime
 from ..models import Order, OrderItem, Product, User
 from ..database import db
 from flask import current_app
+# ==== Helpers de Email (SMTP directo, sin Flask-Mail) ====
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
+def format_currency_ars(n):
+    try:
+        n = float(n or 0)
+    except Exception:
+        n = 0.0
+    # Separador de miles simple; ajustá si querés formato más local
+    return f"${int(n):,}".replace(",", ".")
+
+def build_order_email_html(order_id, customer_name, customer_email, items, total_amount, created_at_iso, shipping_address_text):
+    # items: lista de dicts: {title, quantity, unit_price, subtotal}
+    rows_html = "\n".join([
+        f"""
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #eee">{i['title']}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{i['quantity']}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">{format_currency_ars(i['unit_price'])}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">{format_currency_ars(i['subtotal'])}</td>
+        </tr>
+        """
+        for i in items
+    ])
+
+    html = f"""
+    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;background:#f7f7f7;padding:24px">
+      <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+        <div style="background:#4f46e5;color:white;padding:16px 20px">
+          <h1 style="margin:0;font-size:20px">¡Gracias por tu compra!</h1>
+        </div>
+
+        <div style="padding:20px">
+          <p style="margin:0 0 8px">Hola {customer_name or 'Cliente'},</p>
+          <p style="margin:0 0 16px">Recibimos tu pedido y ya lo estamos procesando.</p>
+
+         <div style="margin:16px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
+            <div style="line-height:1.6">
+                <div><strong>Pedido:</strong> #{order_id}</div>
+                <div><strong>Fecha:</strong> {created_at_iso.split('T')[0]}</div>
+                <div><strong>Email:</strong> {customer_email}</div>
+            </div>
+            <div style="margin-top:6px">
+                <strong>Entrega/Retiro:</strong> {shipping_address_text or 'Datos no informados'}
+            </div>
+            </div>
+
+
+          <table style="width:100%;border-collapse:collapse;margin-top:8px">
+            <thead>
+              <tr style="background:#f3f4f6">
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">Producto</th>
+                <th style="text-align:center;padding:8px;border-bottom:1px solid #e5e7eb">Cant.</th>
+                <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">Precio</th>
+                <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows_html}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="padding:12px;text-align:right;font-weight:600">Total</td>
+                <td style="padding:12px;text-align:right;font-weight:700">{format_currency_ars(total_amount)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <p style="margin:16px 0 0;color:#555">Si tenés preguntas, respondé este email.</p>
+          <p style="margin:4px 0 0;color:#555">¡Gracias por elegirnos!</p>
+        </div>
+
+        <div style="background:#f3f4f6;color:#6b7280;padding:12px 20px;font-size:12px">
+          Zarpados Vapers — Este mensaje se envió automáticamente luego de tu compra.
+        </div>
+      </div>
+    </div>
+    """
+    return html
+
+def send_email_smtp(to_email, subject, html):
+    import email.charset
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.header import Header
+    from email.utils import formataddr
+
+    host = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    port = int(os.getenv("MAIL_PORT", "587"))
+    use_tls = str(os.getenv("MAIL_USE_TLS", "True")).lower() == "true"
+    username = os.getenv("MAIL_USERNAME")
+    password = os.getenv("MAIL_PASSWORD")
+    default_sender = os.getenv("MAIL_DEFAULT_SENDER") or username
+
+    if not (username and password):
+        print("⚠️ Email no enviado: faltan MAIL_USERNAME/MAIL_PASSWORD")
+        return False
+
+    # 👇 Forzamos charset UTF-8 en todo el mensaje
+    email.charset.add_charset('utf-8', email.charset.SHORTEST, None, 'utf-8')
+
+    msg = MIMEMultipart("alternative")
+    msg.set_charset("utf-8")
+
+    # Cabeceras en UTF-8
+    msg["Subject"] = str(Header(subject, "utf-8"))
+    msg["From"] = str(Header(default_sender, "utf-8"))
+    msg["To"] = str(Header(to_email, "utf-8"))
+
+    # Cuerpo HTML en UTF-8
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    try:
+        server = smtplib.SMTP(host, port)
+        if use_tls:
+            server.starttls()
+        server.login(username, password)
+        # 🔥 CAMBIO: usar as_bytes().decode('utf-8') en lugar de as_string()
+        server.sendmail(default_sender, [to_email], msg.as_bytes())
+        server.quit()
+        print(f"✅ Email enviado a {to_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Error enviando email a {to_email}: {e}")
+        return False
 
 mercadopago_bp = Blueprint('mercadopago', __name__)
+
+
 
 # =========================================================
 #  CREDENCIALES MP POR ENTORNO (cambiar SOLO APP_ENV en deploy)
@@ -50,7 +178,6 @@ def get_mp_sdk():
 def create_preference():
     """Crear preferencia de pago en MercadoPago (JWT opcional)"""
     try:
-        # JWT opcional
         try:
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
@@ -62,36 +189,30 @@ def create_preference():
         print(f"User ID: {user_id}")
         print(f"Request data: {data}")
 
-        # Validaciones mínimas
         if not data.get('items'):
             return jsonify({'error': 'Items requeridos'}), 400
         if not (data.get('payer') and data['payer'].get('email')):
             return jsonify({'error': 'Email del payer es requerido'}), 400
 
-        # Normalización de items
+        # Normalizar items
         items = []
         for it in data['items']:
-            if not all(k in it for k in ['title', 'quantity', 'unit_price']):
-                return jsonify({'error': 'Items con formato incorrecto'}), 400
             qty = int(it.get('quantity', 1) or 1)
             price = float(it.get('unit_price', 0) or 0)
             if price <= 0:
                 return jsonify({'error': 'unit_price debe ser > 0'}), 400
             items.append({
-                "id": str(it.get("id") or it.get("sku") or "item"),
+                "id": str(it.get("id") or "item"),
                 "title": str(it["title"]),
                 "quantity": qty,
                 "unit_price": price,
                 "currency_id": "ARS",
             })
 
-        print(f"Items validados/normalizados: {items}")
-
-        # URLs del front/back
         frontend_url   = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
         backend_public = os.getenv('BACKEND_PUBLIC_URL', '').rstrip('/')
+        is_local = ("localhost" in frontend_url) or ("127.0.0.1" in frontend_url)
 
-        # Armamos payer (solo email obligatorio)
         payer_in = data.get('payer', {}) or {}
         payer_out = {"email": payer_in.get("email")}
         if payer_in.get("name"): payer_out["name"] = payer_in["name"]
@@ -107,104 +228,53 @@ def create_preference():
             pa = payer_in["address"]
             payer_out["address"] = {"street_name": str(pa.get("street_name", "")), "zip_code": str(pa.get("zip_code", ""))}
 
-        # En LOCAL (localhost/127.0.0.1) NO mandamos auto_return (evita 400 invalid_auto_return)
-        is_local = ("localhost" in frontend_url) or ("127.0.0.1" in frontend_url)
-
-        # referencia propia para trazar (si tenés user_id úsalo; si no, timestamp)
-        external_ref = str(user_id or int(datetime.utcnow().timestamp()))
+        form_email = (data.get('form_email') or payer_out.get("email") or "").strip().lower()
+        ext_ref = str(user_id or int(datetime.utcnow().timestamp()))
 
         preference_data = {
             "items": items,
             "payer": payer_out,
             "binary_mode": True,
-            "external_reference": external_ref,
-            # 👇 Enviamos los items también en additional_info
+            "external_reference": ext_ref,
             "additional_info": {
-                "items": [
-                    {
-                        "id": it["id"],
-                        "title": it["title"],
-                        "quantity": it["quantity"],
-                        "unit_price": it["unit_price"]
-                    } for it in items
-                ]
+                "items": items,
+                "form_email": form_email,
+                "name": payer_in.get("name", ""),
+                "surname": payer_in.get("surname", "")
             },
+            "metadata": {
+                "form_email": form_email,
+                "name": payer_in.get("name", ""),
+                "surname": payer_in.get("surname", "")
+            },
+            "back_urls": {
+                "success": f"{frontend_url}/thank-you?status=approved",
+                "failure": f"{frontend_url}/thank-you?status=failure",
+                "pending": f"{frontend_url}/thank-you?status=pending",
+            }
         }
 
-        # back_urls (MP te redirige con ?status=approved|pending|failure)
-        preference_data["back_urls"] = {
-            "success": f"{frontend_url}/thank-you?status=approved",
-            "failure": f"{frontend_url}/thank-you?status=failure", 
-            "pending": f"{frontend_url}/thank-you?status=pending",
-        }
-
-        # Solo en dominio público/producción habilitamos auto_return
         if not is_local:
             preference_data["auto_return"] = "approved"
-
-        # 🔥 WEBHOOK CON PROXY: usa /api porque Vite redirige al backend
         if backend_public:
             preference_data["notification_url"] = f"{backend_public}/api/mercadopago/webhook"
-            print(f"✅ Webhook configurado: {preference_data['notification_url']}")
 
-        print(f"Preference data final: {preference_data}")
-
-        # Crear preferencia
         sdk = get_mp_sdk()
-        print("SDK inicializado correctamente")
-        
-        # Si es local y tenés un túnel (por ejemplo ngrok), podés definir BACKEND_PUBLIC_URL en .env
-        dev_tunnel = os.getenv('BACKEND_PUBLIC_URL', '').rstrip('/')
-        if is_local and dev_tunnel:
-            # 👉 permite testear redirección en localhost con túnel
-            preference_data["auto_return"] = "approved"
-            # fuerza back_urls con el túnel (no solo localhost)
-            preference_data["back_urls"] = {
-                "success": f"{dev_tunnel}/thank-you?status=approved",
-                "failure": f"{dev_tunnel}/thank-you?status=failure",
-                "pending": f"{dev_tunnel}/thank-you?status=pending",
-            }
-            
-        preference_response = sdk.preference().create(preference_data)
-        print(f"MP Response completa: {preference_response}")
-
-        if preference_response.get("status") == 201:
-            preference = preference_response["response"]
-            print("SUCCESS: Preferencia creada exitosamente")
+        pref = sdk.preference().create(preference_data)
+        if pref.get("status") == 201:
             return jsonify({
-                'preference_id': preference['id'],
-                'init_point': preference['init_point'],
-                'sandbox_init_point': preference.get('sandbox_init_point', preference['init_point'])
+                'preference_id': pref['response']['id'],
+                'init_point': pref['response']['init_point'],
+                'sandbox_init_point': pref['response'].get('sandbox_init_point')
             }), 201
 
-        # Manejo de error legible
-        status = preference_response.get('status', 400)
-        error_details = preference_response.get('response', {}) or {}
-        cause_list = error_details.get('cause') or []
-        cause_texts = []
-        for c in cause_list or []:
-            desc = c.get('description') or c.get('message') or str(c)
-            if desc: cause_texts.append(desc)
-        human_reason = " | ".join(cause_texts) if cause_texts else (error_details.get('message') or "Bad request")
+        return jsonify({'error': 'Error creando preferencia en MercadoPago'}), 400
 
-        print(f"ERROR MP: Status {status}")
-        print(f"Error details: {error_details}")
-
-        return jsonify({
-            'error': f'Error creando preferencia en MercadoPago (Status: {status})',
-            'reason': human_reason,
-            'details': error_details,
-            'mp_response': preference_response
-        }), status
-
-    except RuntimeError as e:
-        print(f"Config error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
     except Exception as e:
         import traceback
-        print(f"EXCEPCIÓN en create_preference: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
-        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 
 # =========================================================
 #  WEBHOOK
@@ -297,90 +367,133 @@ def auto_login_by_payment(payment_id):
 
 
 def create_order_from_payment(payment_data):
-    """Crear orden + items y descontar stock - VERSIÓN QUE FUNCIONA"""
-    from sqlalchemy import create_engine
+    """
+    Crear orden + items, descontar stock y enviar email de confirmación
+    de forma idempotente. Soporta múltiples llamados simultáneos del webhook
+    sin generar pedidos duplicados.
+    """
     from sqlalchemy.orm import sessionmaker
-    
-    # Crear sesión independiente
+    from sqlalchemy import create_engine
+    from sqlalchemy.exc import IntegrityError
+
     engine = create_engine(os.getenv('SQLALCHEMY_DATABASE_URI'))
     Session = sessionmaker(bind=engine)
     session = Session()
-    
+
     try:
-        payment_id = str(payment_data.get('id'))
+        pid = str(payment_data.get('id'))
         if payment_data.get('status') != 'approved':
             return
 
-        # Idempotencia
-        if session.query(Order).filter_by(payment_id=payment_id).first():
+        # ⚠️ Chequeo rápido (por si ya existe)
+        if session.query(Order.id).filter_by(payment_id=pid).first():
+            print(f"⚠️ Orden ya creada para payment_id={pid}, se ignora.")
             return
 
-        payer = payment_data.get('payer') or {}
-        payer_email = payer.get('email')
-        full_name = f"{payer.get('first_name', '')} {payer.get('last_name', '')}".strip() or 'Cliente'
-        mp_address = (payer.get('address') or {}).get('street_name', 'Retiro en tienda')
+        payer = payment_data.get('payer', {}) or {}
+        mp_email = (payer.get('email') or '').strip().lower()
+        meta = payment_data.get('metadata') or {}
+        addi = payment_data.get('additional_info') or {}
 
-        # Usuario
-        user = session.query(User).filter_by(email=payer_email).first()
-        if not user and payer_email:
+        # Datos del comprador (prioridad al form del checkout)
+        first_name = meta.get('name') or addi.get('name') or payer.get('first_name') or ''
+        last_name  = meta.get('surname') or addi.get('surname') or payer.get('last_name') or ''
+        full_name  = f"{first_name} {last_name}".strip() or 'Cliente'
+
+        mp_address = (payer.get('address') or {}).get('street_name', 'Retiro en tienda')
+        form_email = (meta.get('form_email') or addi.get('form_email') or '').strip().lower()
+        ext_ref = (payment_data.get('external_reference') or '').strip()
+
+        # Buscar / crear usuario
+        user = None
+        email_to_use = form_email or mp_email
+        if ext_ref.isdigit():
+            user = session.query(User).get(int(ext_ref))
+        if not user and email_to_use:
+            user = session.query(User).filter_by(email=email_to_use).first()
+        if not user and email_to_use:
             from werkzeug.security import generate_password_hash
             user = User(
-                email=payer_email,
-                password=generate_password_hash('temp123'),  # Hash más corto
+                email=email_to_use,
+                password=generate_password_hash('temp123'),
                 name=full_name,
                 shipping_address={"address": mp_address},
                 is_active=True
             )
             session.add(user)
             session.flush()
-            print(f"👤 Usuario: {user.email} (ID: {user.id})")
 
-        # Orden
+        # Crear la orden (protegido contra duplicados por unique=True en payment_id)
         order = Order(
             user_id=user.id if user else None,
             total_amount=float(payment_data.get('transaction_amount', 0)),
             status='paid',
             payment_method='mercadopago',
-            payment_id=payment_id,
-            external_reference=payment_data.get('external_reference', ''),
-            customer_email=payer_email or '',
+            payment_id=pid,
+            external_reference=ext_ref,
+            customer_email=email_to_use,
             customer_name=full_name,
             shipping_address=mp_address,
             created_at=datetime.utcnow()
         )
         session.add(order)
-        session.flush()
-        print(f"📦 Orden #{order.id}")
+        session.flush()  # ⚠️ fuerza a obtener order.id antes de usarlo
 
-        # Items
-        items = (payment_data.get("additional_info") or {}).get("items") or []
-        for it in items:
+
+        # Items y actualización de stock
+        raw_items = (payment_data.get("additional_info") or {}).get("items") or []
+        items_for_email = []
+        for it in raw_items:
             if not str(it.get("id", "")).isdigit():
                 continue
-            
-            pid = int(it["id"])
+            prod_id = int(it["id"])
             qty = int(it.get("quantity", 1))
-            
-            session.add(OrderItem(
-                order_id=order.id,
-                product_id=pid,
-                quantity=qty,
-                price=float(it.get("unit_price", 0))
-            ))
-            
-            product = session.query(Product).get(pid)
+            price = float(it.get("unit_price", 0))
+            subtotal = qty * price
+
+            session.add(OrderItem(order_id=order.id, product_id=prod_id, quantity=qty, price=price))
+
+            product = session.query(Product).get(prod_id)
             if product:
                 product.stock = max(0, (product.stock or 0) - qty)
-                print(f"  Stock #{pid}: {product.stock}")
 
-        session.commit()
-        print(f"✅ Orden #{order.id} OK")
+            items_for_email.append({
+                "title": it.get("title", f"Producto {prod_id}"),
+                "quantity": qty,
+                "unit_price": price,
+                "subtotal": subtotal
+            })
+
+        # 💡 Commit atómico: si dos hilos intentan guardar el mismo payment_id,
+        # la segunda transacción fallará por la restricción unique.
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            print(f"⚠️ Pedido duplicado detectado en commit (payment_id={pid}), ignorando.")
+            return
+
+        # Enviar email de confirmación (no bloqueante)
+        try:
+            html = build_order_email_html(
+                order_id=order.id,
+                customer_name=full_name,
+                customer_email=email_to_use,
+                items=items_for_email,
+                total_amount=order.total_amount,
+                created_at_iso=order.created_at.isoformat(),
+                shipping_address_text=order.shipping_address
+            )
+            send_email_smtp(email_to_use, f"Zarpados Vapers - Confirmación de compra #{order.id}", html)
+        except Exception as e:
+            print(f"⚠️ No se pudo enviar email: {e}")
 
     except Exception as e:
         session.rollback()
-        print(f"💥 {e}")
+        print(f"💥 Error en create_order_from_payment: {e}")
     finally:
         session.close()
+
 
 # =========================================================
 #  CONSULTAR UN PAGO

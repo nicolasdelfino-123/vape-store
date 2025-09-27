@@ -13,29 +13,34 @@ export default function ThankYou() {
     const navigate = useNavigate();
 
     const status = q.get("status");
-    // 🔥 MP puede enviar el ID como payment_id o collection_id
+    // MP puede enviar el ID como payment_id o collection_id
     const paymentId = q.get("payment_id") || q.get("collection_id");
     const preferenceId = q.get("preference_id");
     const externalRef = q.get("external_reference");
 
     useEffect(() => {
         const handlePaymentSuccess = async () => {
-            if (status === "approved") {
-                console.log("✅ Pago aprobado - procesando...");
-                console.log("💳 Payment ID:", paymentId);
+            if (status !== "approved") return;
 
-                // 1. Vaciar carrito INMEDIATAMENTE
-                localStorage.removeItem("cart");
-                actions.clearCart?.();
+            console.log("✅ Pago aprobado - procesando...");
+            console.log("💳 Payment ID:", paymentId);
 
-                // 2. Esperar 2 segundos para que el webhook procese
-                await new Promise(resolve => setTimeout(resolve, 2000));
+            // 1) Vaciar carrito
+            localStorage.removeItem("cart");
+            actions.clearCart?.();
 
-                // 3. Intentar auto-login si hay payment_id
-                if (paymentId) {
+            // 2) Esperar un poco a que el webhook cree la orden
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // 3) Auto-login con reintentos (por si el webhook tarda)
+            if (paymentId) {
+                const maxRetries = 5;   // 5 intentos
+                const delayMs = 1500;   // cada 1.5s
+                let ok = false;
+
+                for (let i = 0; i < maxRetries && !ok; i++) {
                     try {
-                        console.log(`🔐 Intentando auto-login con payment_id: ${paymentId}`);
-
+                        console.log(`🔐 Auto-login intento ${i + 1}/${maxRetries} con payment_id: ${paymentId}`);
                         const response = await fetch(
                             `${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/auto-login/${paymentId}`,
                             { method: 'POST' }
@@ -45,27 +50,29 @@ export default function ThankYou() {
                             const data = await response.json();
                             localStorage.setItem("token", data.token);
                             console.log("✅ Auto-login exitoso");
+                            ok = true;
 
-                            // Hidratar sesión
                             if (actions.hydrateSession) {
                                 await actions.hydrateSession();
                             }
                         } else {
-                            const error = await response.json();
+                            const error = await response.json().catch(() => ({}));
                             console.log("⚠️ Auto-login falló:", error);
+                            await new Promise(r => setTimeout(r, delayMs));
                         }
-                    } catch (error) {
-                        console.error("❌ Error en auto-login:", error);
+                    } catch (err) {
+                        console.error("❌ Error en auto-login:", err);
+                        await new Promise(r => setTimeout(r, delayMs));
                     }
                 }
-
-                // 4. Recargar órdenes
-                if (actions.fetchOrders) {
-                    await actions.fetchOrders();
-                }
-
-                console.log("✅ Proceso completado");
             }
+
+            // 4) Recargar órdenes
+            if (actions.fetchOrders) {
+                await actions.fetchOrders();
+            }
+
+            console.log("✅ Proceso completado");
         };
 
         handlePaymentSuccess();
@@ -89,7 +96,7 @@ export default function ThankYou() {
                             {externalRef && <li><span className="font-medium">Referencia:</span> {externalRef}</li>}
                         </ul>
                         <p className="text-xs text-gray-500 mt-3">
-                            El pedido se está procesando. En unos segundos estará disponible en "Mis pedidos".
+                            El pedido se está procesando. En segundos estará disponible en "Mis pedidos".
                         </p>
                     </div>
 

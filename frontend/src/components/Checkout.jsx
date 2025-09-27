@@ -209,28 +209,33 @@ const Checkout = () => {
                 throw new Error('El carrito está vacío')
             }
 
+            // Armamos items con IDs numéricos (product.id real)
             const items = store.cart.map((item) => {
                 const qty = Math.max(1, parseInt(item.quantity || 1, 10))
                 const price = Number(item.price)
                 if (!Number.isFinite(price) || price <= 0) {
                     throw new Error(`Precio inválido para ${item.name}`)
                 }
-                const productId = item.product_id ?? item.id; // asegúrate de tener uno real en el cart
+                const productId = item.product_id ?? item.id
                 if (!productId) {
-                    throw new Error(`Falta product_id para ${item.name}`);
+                    throw new Error(`Falta product_id para ${item.name}`)
                 }
                 return {
-                    id: String(productId),           // 👈 SIEMPRE el id de Product
+                    id: String(productId),   // ⚠️ numérico (texto)
                     title: item.name,
                     quantity: qty,
-                    unit_price: price,
+                    unit_price: price
                 }
             })
 
+            // Mail del checkout (PRIORIDAD de asociación)
+            const formEmail = (billing.email || '').trim().toLowerCase()
+
+            // Payload para el backend
             const preferenceData = {
                 items,
                 payer: {
-                    email: billing.email,
+                    email: formEmail,
                     name: billing.firstName,
                     surname: billing.lastName,
                     identification: billing.dni ? { type: 'DNI', number: String(billing.dni) } : undefined,
@@ -239,7 +244,9 @@ const Checkout = () => {
                         street_name: billing.address,
                         zip_code: billing.zipCode
                     } : undefined
-                }
+                },
+                // 👇 clave para que el backend asocie por mail del checkout
+                form_email: formEmail
             }
 
             const token = localStorage.getItem('token')
@@ -247,29 +254,20 @@ const Checkout = () => {
                 ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                 : { 'Content-Type': 'application/json' }
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/create-preference`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(preferenceData)
-            })
+            const response = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/create-preference`,
+                { method: 'POST', headers, body: JSON.stringify(preferenceData) }
+            )
 
             if (!response.ok) {
-                const errorText = await response.text();
-                let errorData = null;
-                try { errorData = JSON.parse(errorText); } catch { errorData = { raw: errorText }; }
-
-                // 🔎 Mostramos TODO en consola para debugear rápido
-                console.error("MP preference error payload:", errorData);
-
-                // 🧠 Mensaje visible con la 'reason' que te manda el backend
-                const visible = errorData?.reason
-                    || errorData?.error
-                    || `Error HTTP ${response.status}`;
-
-                alert(`Error al crear la preferencia de pago:\n${visible}`);
-                return; // cortamos el flujo sin lanzar excepción (ya mostramos alert)
+                const errorText = await response.text()
+                let errorData = null
+                try { errorData = JSON.parse(errorText) } catch { errorData = { raw: errorText } }
+                console.error("MP preference error payload:", errorData)
+                const visible = errorData?.reason || errorData?.error || `Error HTTP ${response.status}`
+                alert(`Error al crear la preferencia de pago:\n${visible}`)
+                return
             }
-
 
             const data = await response.json()
             if (data.preference_id) {
@@ -284,6 +282,7 @@ const Checkout = () => {
             setLoading(false)
         }
     }
+
 
     if (!store.cart || store.cart.length === 0) {
         return (
