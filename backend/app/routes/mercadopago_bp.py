@@ -427,7 +427,7 @@ def create_order_from_payment(payment_data):
         order = Order(
             user_id=user.id if user else None,
             total_amount=float(payment_data.get('transaction_amount', 0)),
-            status='paid',
+            status='pagado',
             payment_method='mercadopago',
             payment_id=pid,
             external_reference=ext_ref,
