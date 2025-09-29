@@ -2,42 +2,29 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Context } from "../js/store/appContext.jsx";
 import { useNavigate, Link } from "react-router-dom";
-// URL base del backend (definila en .env como VITE_BACKEND_URL, sin "/" al final)
+
 const API = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, "") || "";
 
-// Normaliza paths viejos
+// --- helpers ---
 const normalizeImagePath = (u = "") => {
   if (!u) return "";
   if (u.startsWith("/admin/uploads/")) u = u.replace("/admin", "/public");
-  if (u.startsWith("/uploads/")) u = `/public${u}`; // si alguna vez vino sin /public
+  if (u.startsWith("/uploads/")) u = `/public${u}`;
   return u;
 };
 
-// Convierte relativo → absoluto
-// Debe quedar exactamente así:
 const toAbsUrl = (u = "") => {
   u = normalizeImagePath(u);
   if (!u) return "";
-  if (/^https?:\/\//i.test(u)) return u;        // http(s) ya absoluto
-
-  // ✅ SOLO assets del backend (tu server) van con API
+  if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith("/public/")) return `${API}${u}`;
-
-  // ✅ Cualquier otro absoluto (p.ej. "/sin_imagen.jpg" en frontend) se deja igual
   if (u.startsWith("/")) return u;
-
-  // 🧩 Relativo sin barra: si lo usás, asumimos backend
   return `${API}/${u}`;
 };
 
-
-
-// helper para título robusto
 const getTitle = (it) => {
   let base = String(it?.name ?? it?.product?.name ?? it?.title ?? "Producto");
-  if (it.selectedFlavor) {
-    base += ` (${it.selectedFlavor})`;
-  }
+  if (it.selectedFlavor) base += ` (${it.selectedFlavor})`;
   return base;
 };
 
@@ -47,8 +34,8 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
 
   const isRouteMode = controlledOpen === undefined && controlledOnClose === undefined;
   const [internalOpen, setInternalOpen] = useState(true);
-
   const isOpen = isRouteMode ? internalOpen : !!controlledOpen;
+
   const close = () => {
     if (isRouteMode) {
       setInternalOpen(false);
@@ -65,30 +52,22 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
       0
     ) || 0;
 
-  // UI local para "medios de envío"
   const [postalCode, setPostalCode] = useState("");
   const [pickup, setPickup] = useState(false);
 
-  // Esc para cerrar
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape" && isOpen) close();
-    };
+    const onKey = (e) => e.key === "Escape" && isOpen && close();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Focus al abrir
   const closeBtnRef = useRef(null);
   useEffect(() => {
     if (isOpen && closeBtnRef.current) closeBtnRef.current.focus();
   }, [isOpen]);
 
-  // Si no está abierto (modal), no pinto nada
   if (!controlledOpen && !isRouteMode && controlledOpen !== false) return null;
 
-  // Contenido principal del drawer
   const DrawerContent = (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -121,7 +100,6 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
         ) : (
           <>
             {store.cart.map((item) => {
-              // máximo permitido (respeta sabor si existe)
               const max = (item?.selectedFlavor && Array.isArray(item?.flavor_catalog))
                 ? (item.flavor_catalog.find(f => f?.name === item.selectedFlavor)?.stock ?? (Number.isFinite(Number(item?.stock)) ? Number(item.stock) : 0))
                 : (Number.isFinite(Number(item?.stock)) ? Number(item.stock) : 0);
@@ -129,7 +107,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               const atLimit = Number(item.quantity || 0) >= Number(max || 0);
 
               return (
-                <div key={item.id} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
+                <div key={`${item.id}-${item.selectedFlavor || 'default'}`} className="bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="flex gap-3">
                     <img
                       src={toAbsUrl(item?.image_url) || "/sin_imagen.jpg"}
@@ -151,7 +129,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                           </p>
                         </div>
                         <button
-                          onClick={() => actions.removeFromCart(item.id)}
+                          onClick={() => actions.removeFromCart(item.id, item.selectedFlavor)}
                           className="text-gray-400 hover:text-gray-600"
                           aria-label="Eliminar producto"
                           title="Eliminar"
@@ -160,14 +138,15 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                         </button>
                       </div>
 
+                      {/* Controles de cantidad */}
                       <div className="mt-3 flex items-center justify-between">
-                        {/* Controles cantidad */}
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() =>
                               actions.updateCartQuantity(
                                 item.id,
-                                Math.max(1, (item.quantity || 1) - 1)
+                                Math.max(1, (item.quantity || 1) - 1),
+                                item.selectedFlavor
                               )
                             }
                             aria-label="Disminuir cantidad"
@@ -181,25 +160,19 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
                           <button
                             onClick={() => {
                               const next = Math.min((item.quantity || 1) + 1, Number(max || 0));
-                              actions.updateCartQuantity(item.id, next);
+                              actions.updateCartQuantity(item.id, next, item.selectedFlavor);
                             }}
                             aria-label="Aumentar cantidad"
                             disabled={atLimit}
                             title={atLimit ? "Sin stock disponible" : "Aumentar cantidad"}
-                            className={`w-9 h-9 rounded flex items-center justify-center text-lg ${atLimit ? "bg-gray-100 opacity-50 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"
-                              }`}
+                            className={`w-9 h-9 rounded flex items-center justify-center text-lg ${atLimit ? "bg-gray-100 opacity-50 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"}`}
                           >
                             +
                           </button>
-
                         </div>
 
-                        {/* Total por ítem */}
                         <div className="text-right font-semibold">
-                          $
-                          {(
-                            Number(item.price || 0) * Number(item.quantity || 0)
-                          ).toLocaleString("es-AR")}
+                          ${(Number(item.price || 0) * Number(item.quantity || 0)).toLocaleString("es-AR")}
                         </div>
                       </div>
                     </div>
@@ -209,7 +182,6 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
             })}
           </>
         )}
-
 
         {/* Subtotal */}
         <div className="flex items-center justify-between pt-2">
@@ -236,9 +208,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               className="flex-1 border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-200"
             />
             <button
-              onClick={() => {
-                actions.showToast?.("Cálculo de envío próximamente");
-              }}
+              onClick={() => actions.showToast?.("Cálculo de envío próximamente")}
               className="px-4 sm:px-5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
             >
               CALCULAR
@@ -247,10 +217,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
           <button
             type="button"
             onClick={() =>
-              window.open(
-                "https://www.correoargentino.com.ar/formularios/cpa",
-                "_blank"
-              )
+              window.open("https://www.correoargentino.com.ar/formularios/cpa", "_blank")
             }
             className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
           >
@@ -272,7 +239,7 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
               <p className="text-sm sm:text-base">
                 Local Zarpados - Velez Sarsfield 303
                 <span className="block text-gray-500">
-                  Lunes a viernes 10:30hs a 13:00hs | 16:00hs hasta 22:00hs
+                  Lunes a viernes 10:30hs a 13:00hs | 16:00hs a 22:00hs
                   <br />
                   Sábado 13:00hs a 22:00hs | Domingo cerrado
                 </span>
@@ -281,53 +248,47 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
             <span className="text-green-600 font-semibold">Gratis</span>
           </label>
         </div>
-
-
       </div>
 
       {/* Footer Totales / Acciones */}
-      {
-        store.cart && store.cart.length > 0 && (
-          <div className="border-t p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xl font-semibold">Total:</span>
-              <span className="text-2xl font-bold text-purple-600">
-                ${total.toLocaleString("es-AR")}
-              </span>
-            </div>
-
-            <button
-              onClick={() => {
-                if (isRouteMode) {
-                  navigate('/checkout')
-                } else {
-                  close()
-                  navigate('/checkout')
-                }
-              }}
-              className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-            >
-              INICIAR COMPRA
-            </button>
-
-            <div className="mt-4 text-center">
-              {isRouteMode ? (
-                <Link to="/" className="text-gray-700 underline hover:text-gray-900">
-                  Ver más productos
-                </Link>
-              ) : (
-                <button onClick={close} className="text-gray-700 underline hover:text-gray-900">
-                  Ver más productos
-                </button>
-              )}
-            </div>
+      {store.cart && store.cart.length > 0 && (
+        <div className="border-t p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xl font-semibold">Total:</span>
+            <span className="text-2xl font-bold text-purple-600">
+              ${total.toLocaleString("es-AR")}
+            </span>
           </div>
-        )
-      }
-    </div >
+
+          <button
+            onClick={() => {
+              if (isRouteMode) navigate("/checkout");
+              else {
+                close();
+                navigate("/checkout");
+              }
+            }}
+            className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+          >
+            INICIAR COMPRA
+          </button>
+
+          <div className="mt-4 text-center">
+            {isRouteMode ? (
+              <Link to="/" className="text-gray-700 underline hover:text-gray-900">
+                Ver más productos
+              </Link>
+            ) : (
+              <button onClick={close} className="text-gray-700 underline hover:text-gray-900">
+                Ver más productos
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 
-  // Si es modo ruta, se muestra como página normal (sin overlay).
   if (isRouteMode) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -336,27 +297,22 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
     );
   }
 
-
-  // Drawer con overlay (modo modal): render en portal para NO heredar el transform del Header  
   const modalUI = (
-    <div className={`fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      {/* Overlay */}
+    <div className={`fixed inset-0 z-[100] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ease-out ${isOpen ? "opacity-100" : "opacity-0"
           }`}
         onClick={close}
       />
-
-      {/* Panel */}
       <aside
         className={`
-    absolute right-0 top-0
-    h-screen w-full max-w-md md:max-w-lg
-    bg-white shadow-2xl
-    transform transition-transform duration-500 ease-out
-    ${controlledOpen ? "translate-x-0" : "translate-x-full"}
-    flex flex-col text-gray-900
-  `}
+          absolute right-0 top-0
+          h-screen w-full max-w-md md:max-w-lg
+          bg-white shadow-2xl
+          transform transition-transform duration-500 ease-out
+          ${controlledOpen ? "translate-x-0" : "translate-x-full"}
+          flex flex-col text-gray-900
+        `}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-title"

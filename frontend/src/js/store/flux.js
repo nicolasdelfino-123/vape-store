@@ -541,10 +541,16 @@ const getState = ({ getStore, getActions, setStore }) => {
 			},
 
 
+			// === ACCIONES DE CARRITO MEJORADAS ===
 			addToCart: (product, quantity = 1) => {
 				const store = getStore();
 				const currentCart = store.cart || [];
-				const existingItemIndex = currentCart.findIndex((item) => item.id === product.id);
+				const flavorKey = product.selectedFlavor || ''; // clave de sabor
+
+				// Busca un ítem que coincida en id y sabor
+				const existingItemIndex = currentCart.findIndex(
+					(item) => item.id === product.id && (item.selectedFlavor || '') === flavorKey
+				);
 
 				let updatedCart;
 				if (existingItemIndex >= 0) {
@@ -554,10 +560,12 @@ const getState = ({ getStore, getActions, setStore }) => {
 						quantity: updatedCart[existingItemIndex].quantity + quantity
 					};
 				} else {
-					updatedCart = [...currentCart, { ...product, quantity }];
+					updatedCart = [
+						...currentCart,
+						{ ...product, quantity, selectedFlavor: product.selectedFlavor || null }
+					];
 				}
 
-				// Actualizar store (localStorage se maneja en appContext)
 				setStore({
 					cart: updatedCart,
 					toast: {
@@ -565,7 +573,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 						message: "Producto agregado al carrito"
 					}
 				});
-
 			},
 
 
@@ -580,21 +587,22 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 			},
 
-			removeFromCart: (productId) => {
+			removeFromCart: (productId, selectedFlavor = '') => {
 				const store = getStore();
-				const cart = store.cart.filter((item) => item.id !== productId);
-				setStore({ cart });
-
-			},
-
-			updateCartQuantity: (productId, quantity) => {
-				const store = getStore();
-				const cart = store.cart.map((item) =>
-					item.id === productId ? { ...item, quantity } : item
+				const cart = store.cart.filter(
+					(item) => !(item.id === productId && (item.selectedFlavor || '') === (selectedFlavor || ''))
 				);
 				setStore({ cart });
+			},
 
-
+			updateCartQuantity: (productId, quantity, selectedFlavor = '') => {
+				const store = getStore();
+				const cart = store.cart.map((item) =>
+					item.id === productId && (item.selectedFlavor || '') === (selectedFlavor || '')
+						? { ...item, quantity }
+						: item
+				);
+				setStore({ cart });
 			},
 
 			clearCart: () => {
