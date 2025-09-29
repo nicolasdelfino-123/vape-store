@@ -4,7 +4,7 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, jwt_requ
 import mercadopago
 import os
 from datetime import datetime
-from ..models import Order, OrderItem, Product, User
+from ..models import Order, OrderItem, Product, User, ShippingAddress
 from ..database import db
 from flask import current_app
 # ==== Helpers de Email (SMTP directo, sin Flask-Mail) ====
@@ -259,7 +259,8 @@ def create_preference():
                 "surname": payer_in.get("surname", "")
             },
             "back_urls": {
-                "success": f"{frontend_url}/thank-you?status=approved",
+                # 👇 Agregamos {payment.id} para que MercadoPago devuelva el ID en la URL
+                "success": f"{frontend_url}/thank-you?status=approved&payment_id={{payment.id}}",
                 "failure": f"{frontend_url}/thank-you?status=failure",
                 "pending": f"{frontend_url}/thank-you?status=pending",
             }
