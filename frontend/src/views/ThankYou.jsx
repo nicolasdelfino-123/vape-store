@@ -19,6 +19,11 @@ export default function ThankYou() {
     const externalRef = q.get("external_reference");
 
     useEffect(() => {
+        // ✅ Volver a pedir productos actualizados
+        actions.fetchProducts?.();
+    }, []);
+
+    useEffect(() => {
         const handlePaymentSuccess = async () => {
             if (status !== "approved") return;
 

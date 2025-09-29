@@ -388,6 +388,8 @@ def create_order_from_payment(payment_data):
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import create_engine
     from sqlalchemy.exc import IntegrityError
+    import json
+    from sqlalchemy.orm.attributes import flag_modified
 
     engine = create_engine(os.getenv('SQLALCHEMY_DATABASE_URI'))
     Session = sessionmaker(bind=engine)
@@ -493,8 +495,6 @@ def create_order_from_payment(payment_data):
             ))
 
             # Descontar stock en el producto
-            # Descontar stock en el producto
-           # Descontar stock en el producto
             product = session.query(Product).get(prod_id)
             if product:
                 # Descuento de stock general
@@ -502,20 +502,17 @@ def create_order_from_payment(payment_data):
 
                 # Descuento de stock por sabor
                 if selected_flavor and product.flavor_catalog:
-                    # Crear copia profunda del JSON
-                    import json
                     catalog = json.loads(json.dumps(product.flavor_catalog or []))
-                    
+
                     for flavor in catalog:
                         if flavor.get("name") == selected_flavor:
                             flavor["stock"] = max(0, (flavor.get("stock") or 0) - qty)
                             break
-                    
-                    # Forzar actualización: asignar None primero, luego el nuevo valor
-                    product.flavor_catalog = None
-                    session.flush()
+
                     product.flavor_catalog = catalog
-                    session.flush()
+                    flag_modified(product, "flavor_catalog")
+                    session.add(product)  # ✅ fuerza UPDATE de la columna JSONB
+
             # Título con sabor para el mail
             title = it.get("title", f"Producto {prod_id}")
             if selected_flavor:
