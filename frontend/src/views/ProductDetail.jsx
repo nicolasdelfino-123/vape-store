@@ -9,24 +9,36 @@ const normalizeFlavor = (s) =>
     s.replace(/\s+/g, ' ').trim().replace(/^[-•·]+/, '').trim();
 
 const extractFlavorsFromDescription = (txt = '') => {
-    // Busca "Sabor:" y toma sólo lo que viene después (hasta el fin)
     const m = txt.match(/sabor\s*:\s*(.+)$/i);
     if (!m) return [];
-    // separa por coma | barra | salto
     const parts = m[1].split(/,|\||\/|\n/);
     const flavors = parts
         .map(normalizeFlavor)
         .filter(Boolean)
-        .filter((f) => !/^peso\b|^dimensiones\b/i.test(f)); // descarta ruido
-    // dedup
+        .filter((f) => !/^peso\b|^dimensiones\b/i.test(f));
     return [...new Set(flavors)];
 };
 
+/**
+ * Obtiene sabores disponibles, filtrando los que estén sin stock.
+ */
 const getFlavors = (product) => {
     if (!product) return [];
-    if (Array.isArray(product?.flavors) && product.flavors.length) return product.flavors;
+
+    // Si viene flavor_catalog (estructura recomendada)
+    if (Array.isArray(product.flavor_catalog) && product.flavor_catalog.length) {
+        return product.flavor_catalog
+            .filter(f => (f.stock ?? 0) > 0)       // 👈 solo con stock > 0
+            .map(f => f.name);
+    }
+
+    // Fallback a flavors plano o extraído de descripción
+    if (Array.isArray(product?.flavors) && product.flavors.length)
+        return product.flavors;
+
     return extractFlavorsFromDescription(product?.description || '');
 };
+
 
 // Mapa nombre de categoría -> slug (coincide con ProductGrid)
 const NAME_TO_SLUG = {
