@@ -21,11 +21,19 @@ def format_currency_ars(n):
     return f"${int(n):,}".replace(",", ".")
 
 def build_order_email_html(order_id, customer_name, customer_email, items, total_amount, created_at_iso, shipping_address_text):
-    # items: lista de dicts: {title, quantity, unit_price, subtotal}
+    """
+    Genera el HTML del mail de confirmación de pedido.
+    items: lista de dicts {title, quantity, unit_price, subtotal}
+           title ya puede incluir el sabor elegido (ej: "Pod Vaper (Frutilla Ice)").
+    """
+    # ✅ Si por alguna razón title no incluye el sabor, aseguramos que aparezca
     rows_html = "\n".join([
         f"""
         <tr>
-          <td style="padding:8px;border-bottom:1px solid #eee">{i['title']}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee">
+            {i['title']}
+            {"<br><small style='color:#555'>Sabor: " + i.get('selected_flavor','') + "</small>" if i.get('selected_flavor') else ""}
+          </td>
           <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{i['quantity']}</td>
           <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">{format_currency_ars(i['unit_price'])}</td>
           <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">{format_currency_ars(i['subtotal'])}</td>
@@ -45,7 +53,7 @@ def build_order_email_html(order_id, customer_name, customer_email, items, total
           <p style="margin:0 0 8px">Hola {customer_name or 'Cliente'},</p>
           <p style="margin:0 0 16px">Recibimos tu pedido y ya lo estamos procesando.</p>
 
-         <div style="margin:16px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
+          <div style="margin:16px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
             <div style="line-height:1.6">
                 <div><strong>Pedido:</strong> #{order_id}</div>
                 <div><strong>Fecha:</strong> {created_at_iso.split('T')[0]}</div>
@@ -54,8 +62,7 @@ def build_order_email_html(order_id, customer_name, customer_email, items, total
             <div style="margin-top:6px">
                 <strong>Entrega/Retiro:</strong> {shipping_address_text or 'Datos no informados'}
             </div>
-            </div>
-
+          </div>
 
           <table style="width:100%;border-collapse:collapse;margin-top:8px">
             <thead>
@@ -88,6 +95,7 @@ def build_order_email_html(order_id, customer_name, customer_email, items, total
     </div>
     """
     return html
+
 
 def send_email_smtp(to_email, subject, html):
     import email.charset
@@ -174,9 +182,10 @@ def get_mp_sdk():
 # =========================================================
 #  CREAR PREFERENCIA
 # =========================================================
+# =========================================================
 @mercadopago_bp.route('/create-preference', methods=['POST'])
 def create_preference():
-    """Crear preferencia de pago en MercadoPago (JWT opcional)"""
+    """Crear preferencia de pago en MercadoPago (JWT opcional) con sabor elegido"""
     try:
         try:
             verify_jwt_in_request(optional=True)
@@ -194,7 +203,7 @@ def create_preference():
         if not (data.get('payer') and data['payer'].get('email')):
             return jsonify({'error': 'Email del payer es requerido'}), 400
 
-        # Normalizar items
+        # Normalizar items, manteniendo selected_flavor
         items = []
         for it in data['items']:
             qty = int(it.get('quantity', 1) or 1)
@@ -207,6 +216,7 @@ def create_preference():
                 "quantity": qty,
                 "unit_price": price,
                 "currency_id": "ARS",
+                "selected_flavor": it.get("selected_flavor")  # ✅ NUEVO
             })
 
         frontend_url   = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
@@ -231,6 +241,7 @@ def create_preference():
         form_email = (data.get('form_email') or payer_out.get("email") or "").strip().lower()
         ext_ref = str(user_id or int(datetime.utcnow().timestamp()))
 
+        # ✅ Guardamos selected_flavor también en additional_info y metadata
         preference_data = {
             "items": items,
             "payer": payer_out,
@@ -370,7 +381,8 @@ def create_order_from_payment(payment_data):
     """
     Crear orden + items, descontar stock (general y por sabor) y enviar email
     de confirmación de forma idempotente. Soporta múltiples llamados simultáneos
-    del webhook sin generar pedidos duplicados.
+    del webhook sin generar pedidos duplicados. Guarda también el sabor elegido
+    y, si el usuario es nuevo, su dirección de envío como predeterminada.
     """
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import create_engine
@@ -439,6 +451,25 @@ def create_order_from_payment(payment_data):
         session.add(order)
         session.flush()  # ⚠️ fuerza a obtener order.id antes de usarlo
 
+        # === NUEVO ===
+        # Si el usuario es nuevo, guardamos también su dirección de envío
+        if user and not session.query(ShippingAddress).filter_by(user_id=user.id).first():
+            shipping_payload = {
+                "name": first_name,
+                "lastname": last_name,
+                "dni": (meta.get('dni') or addi.get('dni') or payer.get('identification', {}).get('number') or ""),
+                "country": "Argentina",
+                "address": mp_address,
+                "apartment": addi.get('apartment') or "",
+                "city": addi.get('city') or "",
+                "province": addi.get('province') or "Córdoba",
+                "postalCode": addi.get('postalCode') or "",
+                "phone": (payer.get('phone') or {}).get('number') or "",
+                "email": email_to_use,
+            }
+            sa = ShippingAddress(user_id=user.id, **shipping_payload)
+            session.add(sa)
+
         # Items y actualización de stock (general + por sabor)
         raw_items = (payment_data.get("additional_info") or {}).get("items") or []
         items_for_email = []
@@ -452,15 +483,16 @@ def create_order_from_payment(payment_data):
             price = float(it.get("unit_price", 0))
             subtotal = qty * price
 
-            # Nuevo: extraer el sabor elegido si viene en metadata
+            # ✅ Nuevo: extraer el sabor elegido
             selected_flavor = it.get("selected_flavor")
 
-            # Guardar OrderItem
+            # Guardar OrderItem con el sabor
             session.add(OrderItem(
                 order_id=order.id,
                 product_id=prod_id,
                 quantity=qty,
-                price=price
+                price=price,
+                selected_flavor=selected_flavor
             ))
 
             # Descontar stock en el producto
@@ -478,15 +510,19 @@ def create_order_from_payment(payment_data):
                             break
                     product.flavor_catalog = catalog  # asignar para que se persista
 
+            # Título con sabor para el mail
+            title = it.get("title", f"Producto {prod_id}")
+            if selected_flavor:
+                title += f" ({selected_flavor})"
+
             items_for_email.append({
-                "title": it.get("title", f"Producto {prod_id}"),
+                "title": title,
                 "quantity": qty,
                 "unit_price": price,
                 "subtotal": subtotal
             })
 
-        # 💡 Commit atómico: si dos hilos intentan guardar el mismo payment_id,
-        # la segunda transacción fallará por la restricción unique.
+        # 💡 Commit atómico
         try:
             session.commit()
         except IntegrityError:
@@ -494,7 +530,7 @@ def create_order_from_payment(payment_data):
             print(f"⚠️ Pedido duplicado detectado en commit (payment_id={pid}), ignorando.")
             return
 
-        # Enviar email de confirmación (no bloqueante)
+        # Enviar email de confirmación
         try:
             html = build_order_email_html(
                 order_id=order.id,
@@ -518,8 +554,6 @@ def create_order_from_payment(payment_data):
         print(f"💥 Error en create_order_from_payment: {e}")
     finally:
         session.close()
-
-
 
 # =========================================================
 #  CONSULTAR UN PAGO
