@@ -493,20 +493,24 @@ def create_order_from_payment(payment_data):
             ))
 
             # Descontar stock en el producto
+            # Descontar stock en el producto
             product = session.query(Product).get(prod_id)
             if product:
                 # ↓ Descuento de stock general
                 product.stock = max(0, (product.stock or 0) - qty)
 
-                # ↓ Descuento de stock por sabor (si el producto usa modo por sabor)
-                if product.flavor_stock_mode and selected_flavor and product.flavor_catalog:
-                    catalog = product.flavor_catalog or []
+                # ↓ Descuento de stock por sabor (si el producto usa modo por sabor o tiene flavor_catalog)
+                if selected_flavor and product.flavor_catalog:
+                    catalog = list(product.flavor_catalog or [])  # 👈 Crear copia explícita
                     for flavor in catalog:
                         if flavor.get("name") == selected_flavor:
                             flavor["stock"] = max(0, (flavor.get("stock") or 0) - qty)
                             break
-                    product.flavor_catalog = catalog  # asignar para que se persista
-
+                    # 👇 CRÍTICO: Forzar flag modified para que SQLAlchemy detecte el cambio en JSON
+                    from sqlalchemy.orm.attributes import flag_modified
+                    product.flavor_catalog = catalog
+                    flag_modified(product, "flavor_catalog")
+                    session.add(product)
             # Título con sabor para el mail
             title = it.get("title", f"Producto {prod_id}")
             if selected_flavor:
