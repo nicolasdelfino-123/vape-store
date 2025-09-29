@@ -4,7 +4,7 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, jwt_requ
 import mercadopago
 import os
 from datetime import datetime
-from ..models import Order, OrderItem, Product, User, ShippingAddress
+from ..models import Order, OrderItem, Product, User
 from ..database import db
 from flask import current_app
 # ==== Helpers de Email (SMTP directo, sin Flask-Mail) ====
@@ -382,7 +382,8 @@ def create_order_from_payment(payment_data):
     Crear orden + items, descontar stock (general y por sabor) y enviar email
     de confirmación de forma idempotente. Soporta múltiples llamados simultáneos
     del webhook sin generar pedidos duplicados. Guarda también el sabor elegido
-    y, si el usuario es nuevo, su dirección de envío como predeterminada.
+    y, si el usuario es nuevo o no tiene dirección, completa su shipping_address
+    con los datos del checkout.
     """
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import create_engine
@@ -451,24 +452,20 @@ def create_order_from_payment(payment_data):
         session.add(order)
         session.flush()  # ⚠️ fuerza a obtener order.id antes de usarlo
 
-        # === NUEVO ===
-        # Si el usuario es nuevo, guardamos también su dirección de envío
-        if user and not session.query(ShippingAddress).filter_by(user_id=user.id).first():
-            shipping_payload = {
-                "name": first_name,
-                "lastname": last_name,
-                "dni": (meta.get('dni') or addi.get('dni') or payer.get('identification', {}).get('number') or ""),
-                "country": "Argentina",
+        # ✅ Si el usuario existe y no tiene shipping_address, guardamos lo del checkout en su JSON
+        if user and (not user.shipping_address or not user.shipping_address.get("address")):
+            user.shipping_address = {
                 "address": mp_address,
-                "apartment": addi.get('apartment') or "",
                 "city": addi.get('city') or "",
                 "province": addi.get('province') or "Córdoba",
                 "postalCode": addi.get('postalCode') or "",
                 "phone": (payer.get('phone') or {}).get('number') or "",
+                "dni": (meta.get('dni') or addi.get('dni') or payer.get('identification', {}).get('number') or ""),
+                "name": first_name,
+                "lastname": last_name,
                 "email": email_to_use,
             }
-            sa = ShippingAddress(user_id=user.id, **shipping_payload)
-            session.add(sa)
+            session.add(user)
 
         # Items y actualización de stock (general + por sabor)
         raw_items = (payment_data.get("additional_info") or {}).get("items") or []
