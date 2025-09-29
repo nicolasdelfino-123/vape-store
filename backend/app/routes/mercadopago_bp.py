@@ -259,8 +259,7 @@ def create_preference():
                 "surname": payer_in.get("surname", "")
             },
             "back_urls": {
-                # 👇 Agregamos {payment.id} para que MercadoPago devuelva el ID en la URL
-                "success": f"{frontend_url}/thank-you?status=approved&payment_id={{payment.id}}",
+                "success": f"{frontend_url}/thank-you?status=approved",
                 "failure": f"{frontend_url}/thank-you?status=failure",
                 "pending": f"{frontend_url}/thank-you?status=pending",
             }
