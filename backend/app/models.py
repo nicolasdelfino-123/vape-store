@@ -266,6 +266,8 @@ class OrderItem(db.Model):
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)  # Precio al momento de la compra
     
+    # ➕ NUEVO: sabor elegido
+    selected_flavor: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     # Relaciones
     order: Mapped["Order"] = relationship("Order", back_populates="order_items")
     product: Mapped["Product"] = relationship("Product", back_populates="order_items")
@@ -278,5 +280,6 @@ class OrderItem(db.Model):
             'quantity': self.quantity,
             'price': self.price,
             'product_name': self.product.name if self.product else None,
+            'selected_flavor': self.selected_flavor,  # 👈 NUEVO
             'subtotal': self.quantity * self.price,
         }
