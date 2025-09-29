@@ -368,9 +368,9 @@ def auto_login_by_payment(payment_id):
 
 def create_order_from_payment(payment_data):
     """
-    Crear orden + items, descontar stock y enviar email de confirmación
-    de forma idempotente. Soporta múltiples llamados simultáneos del webhook
-    sin generar pedidos duplicados.
+    Crear orden + items, descontar stock (general y por sabor) y enviar email
+    de confirmación de forma idempotente. Soporta múltiples llamados simultáneos
+    del webhook sin generar pedidos duplicados.
     """
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import create_engine
@@ -439,23 +439,44 @@ def create_order_from_payment(payment_data):
         session.add(order)
         session.flush()  # ⚠️ fuerza a obtener order.id antes de usarlo
 
-
-        # Items y actualización de stock
+        # Items y actualización de stock (general + por sabor)
         raw_items = (payment_data.get("additional_info") or {}).get("items") or []
         items_for_email = []
+
         for it in raw_items:
             if not str(it.get("id", "")).isdigit():
                 continue
+
             prod_id = int(it["id"])
             qty = int(it.get("quantity", 1))
             price = float(it.get("unit_price", 0))
             subtotal = qty * price
 
-            session.add(OrderItem(order_id=order.id, product_id=prod_id, quantity=qty, price=price))
+            # Nuevo: extraer el sabor elegido si viene en metadata
+            selected_flavor = it.get("selected_flavor")
 
+            # Guardar OrderItem
+            session.add(OrderItem(
+                order_id=order.id,
+                product_id=prod_id,
+                quantity=qty,
+                price=price
+            ))
+
+            # Descontar stock en el producto
             product = session.query(Product).get(prod_id)
             if product:
+                # ↓ Descuento de stock general
                 product.stock = max(0, (product.stock or 0) - qty)
+
+                # ↓ Descuento de stock por sabor (si el producto usa modo por sabor)
+                if product.flavor_stock_mode and selected_flavor and product.flavor_catalog:
+                    catalog = product.flavor_catalog or []
+                    for flavor in catalog:
+                        if flavor.get("name") == selected_flavor:
+                            flavor["stock"] = max(0, (flavor.get("stock") or 0) - qty)
+                            break
+                    product.flavor_catalog = catalog  # asignar para que se persista
 
             items_for_email.append({
                 "title": it.get("title", f"Producto {prod_id}"),
@@ -484,7 +505,11 @@ def create_order_from_payment(payment_data):
                 created_at_iso=order.created_at.isoformat(),
                 shipping_address_text=order.shipping_address
             )
-            send_email_smtp(email_to_use, f"Zarpados Vapers - Confirmación de compra #{order.id}", html)
+            send_email_smtp(
+                email_to_use,
+                f"Zarpados Vapers - Confirmación de compra #{order.id}",
+                html
+            )
         except Exception as e:
             print(f"⚠️ No se pudo enviar email: {e}")
 
@@ -493,6 +518,7 @@ def create_order_from_payment(payment_data):
         print(f"💥 Error en create_order_from_payment: {e}")
     finally:
         session.close()
+
 
 
 # =========================================================

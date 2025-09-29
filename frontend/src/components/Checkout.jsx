@@ -221,10 +221,11 @@ const Checkout = () => {
                     throw new Error(`Falta product_id para ${item.name}`)
                 }
                 return {
-                    id: String(productId),   // ⚠️ numérico (texto)
+                    id: String(productId),          // ⚠️ numérico (texto)
                     title: item.name,
                     quantity: qty,
-                    unit_price: price
+                    unit_price: price,
+                    selected_flavor: item.selectedFlavor || null // 👈 NUEVO: envía el sabor elegido
                 }
             })
 
