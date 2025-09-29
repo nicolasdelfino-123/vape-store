@@ -557,6 +557,13 @@ export default function AdminProducts() {
                 >
                     Nuevo
                 </button>
+                <button
+                    onClick={() => fetchAll()}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    title="Actualizar datos desde el servidor"
+                >
+                    🔄 Refrescar
+                </button>
 
 
 
