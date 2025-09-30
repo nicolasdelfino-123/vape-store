@@ -540,51 +540,54 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
-
 			// === ACCIONES DE CARRITO MEJORADAS ===
 			addToCart: (product, quantity = 1) => {
 				const store = getStore();
 				const currentCart = store.cart || [];
-				const flavorKey = product.selectedFlavor || ''; // clave de sabor
+				const flavorKey = product.selectedFlavor || '';
 
-				// Busca un ítem que coincida en id y sabor
+				let maxStock = product.stock || 0;
+				if (product.selectedFlavor && Array.isArray(product.flavor_catalog)) {
+					const f = product.flavor_catalog.find(fl => fl.name === product.selectedFlavor);
+					if (f) maxStock = f.stock;
+				}
+
 				const existingItemIndex = currentCart.findIndex(
 					(item) => item.id === product.id && (item.selectedFlavor || '') === flavorKey
 				);
 
 				let updatedCart;
 				if (existingItemIndex >= 0) {
+					const currentQty = currentCart[existingItemIndex].quantity;
+					const newQty = Math.min(currentQty + quantity, maxStock);
 					updatedCart = [...currentCart];
 					updatedCart[existingItemIndex] = {
 						...updatedCart[existingItemIndex],
-						quantity: updatedCart[existingItemIndex].quantity + quantity
+						quantity: newQty
 					};
 				} else {
 					updatedCart = [
 						...currentCart,
-						{ ...product, quantity, selectedFlavor: product.selectedFlavor || null }
+						{ ...product, quantity: Math.min(quantity, maxStock), selectedFlavor: product.selectedFlavor || null }
 					];
 				}
 
+				// ✅ Primero guardar en localStorage
+				localStorage.setItem('cart', JSON.stringify(updatedCart));
+				console.log("💾 [FLUX] addToCart - Guardado en localStorage:", updatedCart);
+
+				// ✅ Luego actualizar store (SIN función callback)
 				setStore({
+					...store,
 					cart: updatedCart,
-					toast: {
-						isVisible: true,
-						message: "Producto agregado al carrito"
-					}
+					toast: { isVisible: true, message: "Producto agregado al carrito" }
 				});
 			},
-
-
-			// Toast actions
 			hideToast: () => {
-				setStore({
-					toast: {
-						isVisible: false,
-						message: ""
-					}
-				});
-
+				setStore((prev) => ({
+					...prev,
+					toast: { isVisible: false, message: "" }
+				}));
 			},
 
 			removeFromCart: (productId, selectedFlavor = '') => {
@@ -592,7 +595,9 @@ const getState = ({ getStore, getActions, setStore }) => {
 				const cart = store.cart.filter(
 					(item) => !(item.id === productId && (item.selectedFlavor || '') === (selectedFlavor || ''))
 				);
-				setStore({ cart });
+
+				localStorage.setItem('cart', JSON.stringify(cart));
+				setStore((prev) => ({ ...prev, cart }));
 			},
 
 			updateCartQuantity: (productId, quantity, selectedFlavor = '') => {
@@ -602,10 +607,31 @@ const getState = ({ getStore, getActions, setStore }) => {
 						? { ...item, quantity }
 						: item
 				);
-				setStore({ cart });
+
+				localStorage.setItem('cart', JSON.stringify(cart));
+				setStore((prev) => ({ ...prev, cart }));
+			},
+
+			hydrateCart: () => {
+				console.log("💧 [FLUX] hydrateCart LLAMADO");
+				const local = localStorage.getItem("cart");
+				if (local) {
+					try {
+						const parsed = JSON.parse(local);
+						console.log("💧 [FLUX] Carrito parseado:", parsed.length, "items");
+						setStore({ cart: parsed });
+					} catch (err) {
+						console.error("❌ [FLUX] Error parseando cart:", err);
+					}
+				} else {
+					console.log("⚠️ [FLUX] No había carrito en localStorage, no lo piso");
+					// 👈 NO hagas setStore({ cart: [] }) acá
+				}
 			},
 
 			clearCart: () => {
+				console.log("🧹 [FLUX] Limpiando carrito");
+				localStorage.removeItem("cart");
 				setStore({ cart: [] });
 			},
 
@@ -639,7 +665,15 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 					const order = await response.json();
 					const orders = [...store.orders, order];
-					setStore({ ...store, orders, loading: false, cart: [] });
+
+					// 🔥 Limpia carrito después de compra exitosa
+					setStore({
+						...store,
+						orders,
+						loading: false,
+						cart: []
+					});
+
 					return { success: true, data: order };
 				} catch (error) {
 					console.error("Error creating order:", error);

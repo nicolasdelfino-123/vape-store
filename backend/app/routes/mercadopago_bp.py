@@ -183,6 +183,7 @@ def get_mp_sdk():
 #  CREAR PREFERENCIA
 # =========================================================
 # =========================================================
+
 @mercadopago_bp.route('/create-preference', methods=['POST'])
 def create_preference():
     """Crear preferencia de pago en MercadoPago (JWT opcional) con sabor elegido"""
@@ -203,21 +204,28 @@ def create_preference():
         if not (data.get('payer') and data['payer'].get('email')):
             return jsonify({'error': 'Email del payer es requerido'}), 400
 
-        # Normalizar items, manteniendo selected_flavor
+        # Normalizar items
         items = []
+        flavors_meta = []   # 👈 guardaremos acá los sabores para metadata
         for it in data['items']:
             qty = int(it.get('quantity', 1) or 1)
             price = float(it.get('unit_price', 0) or 0)
             if price <= 0:
                 return jsonify({'error': 'unit_price debe ser > 0'}), 400
+
             items.append({
                 "id": str(it.get("id") or "item"),
                 "title": str(it["title"]),
                 "quantity": qty,
                 "unit_price": price,
                 "currency_id": "ARS",
-                "selected_flavor": it.get("selected_flavor")  # ✅ NUEVO
             })
+
+            if it.get("selected_flavor"):
+                flavors_meta.append({
+                    "product_id": str(it.get("id")),
+                    "flavor": it["selected_flavor"]
+                })
 
         frontend_url   = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
         backend_public = os.getenv('BACKEND_PUBLIC_URL', '').rstrip('/')
@@ -241,14 +249,14 @@ def create_preference():
         form_email = (data.get('form_email') or payer_out.get("email") or "").strip().lower()
         ext_ref = str(user_id or int(datetime.utcnow().timestamp()))
 
-        # ✅ Guardamos selected_flavor también en additional_info y metadata
+        # ✅ Guardamos sabores en metadata["flavors"]
         preference_data = {
             "items": items,
             "payer": payer_out,
             "binary_mode": True,
             "external_reference": ext_ref,
             "additional_info": {
-                "items": items,
+                "items": items,   # sin sabores, MP los borra igual
                 "form_email": form_email,
                 "name": payer_in.get("name", ""),
                 "surname": payer_in.get("surname", "")
@@ -256,7 +264,8 @@ def create_preference():
             "metadata": {
                 "form_email": form_email,
                 "name": payer_in.get("name", ""),
-                "surname": payer_in.get("surname", "")
+                "surname": payer_in.get("surname", ""),
+                "flavors": flavors_meta   # 👈 acá van los sabores
             },
             "back_urls": {
                 "success": f"{frontend_url}/thank-you?status=approved",
@@ -285,6 +294,7 @@ def create_preference():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
 
 
 # =========================================================
@@ -379,11 +389,8 @@ def auto_login_by_payment(payment_id):
 
 def create_order_from_payment(payment_data):
     """
-    Crear orden + items, descontar stock (general y por sabor) y enviar email
-    de confirmación de forma idempotente. Soporta múltiples llamados simultáneos
-    del webhook sin generar pedidos duplicados. Guarda también el sabor elegido
-    y, si el usuario es nuevo o no tiene dirección, completa su shipping_address
-    con los datos del checkout.
+    Crear orden + items, descontar stock (general y por sabor) y enviar email.
+    Maneja múltiples sabores para un mismo producto.
     """
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy import create_engine
@@ -391,16 +398,21 @@ def create_order_from_payment(payment_data):
     import json
     from sqlalchemy.orm.attributes import flag_modified
 
+    print("=== [DEBUG] INICIO create_order_from_payment ===")
+    print("Payment data recibido:", payment_data)
+
     engine = create_engine(os.getenv('SQLALCHEMY_DATABASE_URI'))
     Session = sessionmaker(bind=engine)
     session = Session()
 
     try:
         pid = str(payment_data.get('id'))
+        print(f"[DEBUG] Payment ID: {pid}, Status: {payment_data.get('status')}")
+
         if payment_data.get('status') != 'approved':
+            print("[DEBUG] Pago no aprobado, se ignora.")
             return
 
-        # ⚠️ Chequeo rápido (por si ya existe)
         if session.query(Order.id).filter_by(payment_id=pid).first():
             print(f"⚠️ Orden ya creada para payment_id={pid}, se ignora.")
             return
@@ -410,7 +422,14 @@ def create_order_from_payment(payment_data):
         meta = payment_data.get('metadata') or {}
         addi = payment_data.get('additional_info') or {}
 
-        # Datos del comprador (prioridad al form del checkout)
+        print("[DEBUG] Metadata:", meta)
+        print("[DEBUG] Additional_info:", addi)
+
+        # ✅ Lista de sabores en orden (no dict, para que no se pisen)
+        flavors_list = [f.get("flavor") for f in meta.get("flavors", [])]
+        print("[DEBUG] flavors_list:", flavors_list)
+
+        # Datos comprador
         first_name = meta.get('name') or addi.get('name') or payer.get('first_name') or ''
         last_name  = meta.get('surname') or addi.get('surname') or payer.get('last_name') or ''
         full_name  = f"{first_name} {last_name}".strip() or 'Cliente'
@@ -419,7 +438,7 @@ def create_order_from_payment(payment_data):
         form_email = (meta.get('form_email') or addi.get('form_email') or '').strip().lower()
         ext_ref = (payment_data.get('external_reference') or '').strip()
 
-        # Buscar / crear usuario
+        # Usuario
         user = None
         email_to_use = form_email or mp_email
         if ext_ref.isdigit():
@@ -428,6 +447,7 @@ def create_order_from_payment(payment_data):
             user = session.query(User).filter_by(email=email_to_use).first()
         if not user and email_to_use:
             from werkzeug.security import generate_password_hash
+            print(f"[DEBUG] Creando usuario nuevo con email={email_to_use}")
             user = User(
                 email=email_to_use,
                 password=generate_password_hash('temp123'),
@@ -438,7 +458,7 @@ def create_order_from_payment(payment_data):
             session.add(user)
             session.flush()
 
-        # Crear la orden (protegido contra duplicados por unique=True en payment_id)
+        # Orden
         order = Order(
             user_id=user.id if user else None,
             total_amount=float(payment_data.get('transaction_amount', 0)),
@@ -452,72 +472,56 @@ def create_order_from_payment(payment_data):
             created_at=datetime.utcnow()
         )
         session.add(order)
-        session.flush()  # ⚠️ fuerza a obtener order.id antes de usarlo
+        session.flush()
+        print(f"[DEBUG] Orden creada con ID={order.id}")
 
-        # ✅ Si el usuario existe y no tiene shipping_address, guardamos lo del checkout en su JSON
-        if user and (not user.shipping_address or not user.shipping_address.get("address")):
-            user.shipping_address = {
-                "address": mp_address,
-                "city": addi.get('city') or "",
-                "province": addi.get('province') or "Córdoba",
-                "postalCode": addi.get('postalCode') or "",
-                "phone": (payer.get('phone') or {}).get('number') or "",
-                "dni": (meta.get('dni') or addi.get('dni') or payer.get('identification', {}).get('number') or ""),
-                "name": first_name,
-                "lastname": last_name,
-                "email": email_to_use,
-            }
-            session.add(user)
-
-        # Items y actualización de stock (general + por sabor)
         raw_items = (payment_data.get("additional_info") or {}).get("items") or []
-        items_for_email = []
+        print("[DEBUG] raw_items recibidos:", raw_items)
 
-        for it in raw_items:
+        items_for_email = []
+        for idx, it in enumerate(raw_items):
+            print("[DEBUG] Procesando item:", it)
             if not str(it.get("id", "")).isdigit():
                 continue
 
-            prod_id = int(it["id"])
+            prod_id = str(it["id"])
             qty = int(it.get("quantity", 1))
             price = float(it.get("unit_price", 0))
             subtotal = qty * price
 
-            # ✅ Nuevo: extraer el sabor elegido
-            selected_flavor = it.get("selected_flavor")
+            # ✅ Tomar sabor según posición si no viene en el item
+            selected_flavor = it.get("selected_flavor") or (flavors_list[idx] if idx < len(flavors_list) else None)
+            print(f"[DEBUG] Item prod_id={prod_id}, qty={qty}, flavor={selected_flavor}")
 
-            # Guardar OrderItem con el sabor
             session.add(OrderItem(
                 order_id=order.id,
-                product_id=prod_id,
+                product_id=int(prod_id),
                 quantity=qty,
                 price=price,
                 selected_flavor=selected_flavor
             ))
 
-            # Descontar stock en el producto
-            product = session.query(Product).get(prod_id)
+            product = session.query(Product).get(int(prod_id))
             if product:
-                # Descuento de stock general
-                product.stock = max(0, (product.stock or 0) - qty)
+                old_stock = product.stock or 0
+                product.stock = max(0, old_stock - qty)
+                print(f"[DEBUG] Stock general prod {prod_id}: {old_stock} -> {product.stock}")
 
-                # Descuento de stock por sabor
                 if selected_flavor and product.flavor_catalog:
                     catalog = json.loads(json.dumps(product.flavor_catalog or []))
-
                     for flavor in catalog:
                         if flavor.get("name") == selected_flavor:
-                            flavor["stock"] = max(0, (flavor.get("stock") or 0) - qty)
+                            old_fstock = flavor.get("stock") or 0
+                            flavor["stock"] = max(0, old_fstock - qty)
+                            print(f"[DEBUG] Stock sabor '{selected_flavor}': {old_fstock} -> {flavor['stock']}")
                             break
-
                     product.flavor_catalog = catalog
                     flag_modified(product, "flavor_catalog")
-                    session.add(product)  # ✅ fuerza UPDATE de la columna JSONB
+                    session.add(product)
 
-            # Título con sabor para el mail
             title = it.get("title", f"Producto {prod_id}")
             if selected_flavor:
                 title += f" ({selected_flavor})"
-
             items_for_email.append({
                 "title": title,
                 "quantity": qty,
@@ -525,15 +529,15 @@ def create_order_from_payment(payment_data):
                 "subtotal": subtotal
             })
 
-        # 💡 Commit atómico
         try:
             session.commit()
+            print(f"[DEBUG] Commit OK para order_id={order.id}")
         except IntegrityError:
             session.rollback()
             print(f"⚠️ Pedido duplicado detectado en commit (payment_id={pid}), ignorando.")
             return
 
-        # Enviar email de confirmación
+        # Email
         try:
             html = build_order_email_html(
                 order_id=order.id,
@@ -549,6 +553,7 @@ def create_order_from_payment(payment_data):
                 f"Zarpados Vapers - Confirmación de compra #{order.id}",
                 html
             )
+            print("[DEBUG] Email enviado OK")
         except Exception as e:
             print(f"⚠️ No se pudo enviar email: {e}")
 
@@ -557,6 +562,8 @@ def create_order_from_payment(payment_data):
         print(f"💥 Error en create_order_from_payment: {e}")
     finally:
         session.close()
+        print("=== [DEBUG] FIN create_order_from_payment ===")
+
 
 # =========================================================
 #  CONSULTAR UN PAGO

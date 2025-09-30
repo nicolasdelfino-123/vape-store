@@ -132,15 +132,42 @@ const ProductDetail = () => {
         return product.stock;
     };
 
+    // Agregar esta función helper después de getMaxStock
+    const getAvailableStock = () => {
+        const flavorKey = selectedFlavor || '';
+        const inCart = (store.cart || []).find(
+            item => item.id === product.id && (item.selectedFlavor || '') === flavorKey
+        );
+        const alreadyInCart = inCart ? inCart.quantity : 0;
+        return getMaxStock() - alreadyInCart;
+    };
+
     const handleAddToCart = () => {
         if (flavorOptions.length > 0 && !selectedFlavor) {
             setFlavorError('Elegí un sabor antes de agregar al carrito');
             return;
         }
-        if (quantity > getMaxStock()) {
-            setFlavorError(`Solo hay ${getMaxStock()} unidades disponibles${selectedFlavor ? ' para ese sabor' : ''}`);
+
+        // Calcular cuánto ya hay en carrito para este producto/sabor
+        const flavorKey = selectedFlavor || '';
+        const inCart = (store.cart || []).find(
+            item => item.id === product.id && (item.selectedFlavor || '') === flavorKey
+        );
+        const alreadyInCart = inCart ? inCart.quantity : 0;
+
+        const maxStock = getMaxStock();
+        const availableToAdd = maxStock - alreadyInCart;
+
+        if (availableToAdd <= 0) {
+            setFlavorError(`Ya tenés el stock máximo de este producto en el carrito (${maxStock} unidades)`);
             return;
         }
+
+        if (quantity > availableToAdd) {
+            setFlavorError(`Solo podés agregar ${availableToAdd} unidades más (ya tenés ${alreadyInCart} en el carrito)`);
+            return;
+        }
+
         if (actions && actions.addToCart && product) {
             const productWithFlavor = selectedFlavor ? { ...product, selectedFlavor } : product;
             actions.addToCart(productWithFlavor, quantity);
@@ -299,8 +326,9 @@ const ProductDetail = () => {
                                     </button>
                                     <span className="px-4 py-2 font-medium">{quantity}</span>
                                     <button
-                                        onClick={() => setQuantity(Math.min(getMaxStock(), quantity + 1))}
-                                        className="px-3 py-2 text-gray-600 hover:text-gray-800"
+                                        onClick={() => setQuantity(Math.min(getAvailableStock(), quantity + 1))}
+                                        disabled={quantity >= getAvailableStock()}
+                                        className="px-3 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         +
                                     </button>
@@ -309,13 +337,13 @@ const ProductDetail = () => {
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={
-                                        product.stock === 0 ||
+                                        getAvailableStock() <= 0 ||
                                         (flavorOptions.length > 0 && !selectedFlavor) ||
-                                        quantity > getMaxStock()
+                                        quantity > getAvailableStock()
                                     }
                                     className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {product.stock === 0 ? 'Sin stock' : 'Agregar al carrito'}
+                                    {getAvailableStock() <= 0 ? 'Sin stock disponible' : 'Agregar al carrito'}
                                 </button>
                             </div>
 

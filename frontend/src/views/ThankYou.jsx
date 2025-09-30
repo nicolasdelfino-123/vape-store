@@ -19,19 +19,29 @@ export default function ThankYou() {
     const externalRef = q.get("external_reference");
 
     useEffect(() => {
-        // ✅ Volver a pedir productos actualizados
-        actions.fetchProducts?.();
-    }, []);
+        const init = async () => {
+            console.log("📦 [THANKYOU] Cargando productos...");
+            await actions.fetchProducts?.();
+            // ❌ REMOVIDO: Ya no llamamos hydrateCart() acá
+            // El carrito ya está hidratado desde Layout.jsx
+        };
+        init();
+    }, []); // ← Dependencias vacías, solo se ejecuta una vez al montar
 
     useEffect(() => {
+        // ✅ AGREGAR ESTA VALIDACIÓN AL INICIO
+        if (!status) {
+            console.log("⏭️ [THANKYOU] Sin status de pago, saltando lógica de checkout");
+            return;
+        }
+
         const handlePaymentSuccess = async () => {
             if (status !== "approved") return;
 
             console.log("✅ Pago aprobado - procesando...");
             console.log("💳 Payment ID:", paymentId);
-
-            // 1) Vaciar carrito
-            localStorage.removeItem("cart");
+            // 1) Vaciar carrito (solo con la acción centralizada)
+            console.log("🧹 [THANKYOU] Limpiando carrito...");
             actions.clearCart?.();
 
             // 2) Esperar un poco a que el webhook cree la orden
@@ -81,7 +91,7 @@ export default function ThankYou() {
         };
 
         handlePaymentSuccess();
-    }, [status, paymentId]);
+    }, [status, paymentId, actions]);
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-14 text-center">

@@ -47,29 +47,51 @@ const Layout = () => {
 
   // 🔥 MEJORAR: Hidratar sesión al cargar la app
 
+  // 🔥 Hidratar carrito al montar
   useEffect(() => {
     const initializeApp = async () => {
-      console.log("🚀 Inicializando aplicación...");
+      console.log("🚀 [LAYOUT] Inicializando aplicación...");
 
-      // 1. Hidratar sesión si hay token
+      // 1. Hidratar carrito (sincrónico)
+      console.log("🛒 [LAYOUT] Hidratando carrito...");
+      console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localStorage.getItem('cart'));
+      actions.hydrateCart?.();
+
+      // Verificar después de hidratar
+      setTimeout(() => {
+        console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
+      }, 100);
+
+      // 2. Hidratar sesión si hay token
       if (actions.hydrateSession) {
-        console.log("💧 Hidratando sesión...");
+        console.log("💧 [LAYOUT] Hidratando sesión...");
+        console.log("💧 [LAYOUT] Token en localStorage:", localStorage.getItem('token') ? 'SÍ' : 'NO');
         await actions.hydrateSession();
+        console.log("💧 [LAYOUT] Usuario después de hidratar:", store.user?.email || 'No logueado');
       }
 
-      // 2. Cargar categorías desde API
+      // 3. Cargar categorías desde API
       if (actions.fetchCategoriesFromAPI) {
-        console.log("📂 Cargando categorías...");
+        console.log("📂 [LAYOUT] Cargando categorías...");
         await actions.fetchCategoriesFromAPI();
+        console.log("📂 [LAYOUT] Categorías cargadas:", store.categories?.length || 0);
       }
 
-      // 3. Cargar productos si no están cargados
+      // 4. Cargar productos si no están cargados
       if (actions.fetchProducts && (!store.products || store.products.length === 0)) {
-        console.log("📦 Cargando productos...");
+        console.log("📦 [LAYOUT] Cargando productos...");
         await actions.fetchProducts();
+        console.log("📦 [LAYOUT] Productos cargados:", store.products?.length || 0);
+      } else {
+        console.log("📦 [LAYOUT] Productos ya cargados:", store.products?.length || 0);
       }
 
-      console.log("✅ Aplicación inicializada");
+      console.log("✅ [LAYOUT] Aplicación inicializada");
+      console.log("🔍 [LAYOUT] Estado final:");
+      console.log("  - Carrito items:", store.cart?.length || 0);
+      console.log("  - Usuario:", store.user?.email || 'No logueado');
+      console.log("  - Productos:", store.products?.length || 0);
+      console.log("  - localStorage cart:", localStorage.getItem('cart') ? 'EXISTE' : 'VACÍO');
     };
 
     initializeApp();
