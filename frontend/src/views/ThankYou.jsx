@@ -1,4 +1,3 @@
-// src/pages/ThankYou.jsx
 import { useEffect, useContext } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Context } from "../js/store/appContext.jsx";
@@ -8,7 +7,8 @@ function useQuery() {
 }
 
 export default function ThankYou() {
-    const { actions } = useContext(Context);
+    const { store, actions } = useContext(Context);
+
     const q = useQuery();
     const navigate = useNavigate();
 
@@ -29,7 +29,6 @@ export default function ThankYou() {
     }, []); // ← Dependencias vacías, solo se ejecuta una vez al montar
 
     useEffect(() => {
-        // ✅ AGREGAR ESTA VALIDACIÓN AL INICIO
         if (!status) {
             console.log("⏭️ [THANKYOU] Sin status de pago, saltando lógica de checkout");
             return;
@@ -40,9 +39,15 @@ export default function ThankYou() {
 
             console.log("✅ Pago aprobado - procesando...");
             console.log("💳 Payment ID:", paymentId);
-            // 1) Vaciar carrito (solo con la acción centralizada)
+
+            // 1) Vaciar carrito (acción centralizada)
             console.log("🧹 [THANKYOU] Limpiando carrito...");
             actions.clearCart?.();
+
+            // 🔍 Ahora sí log después de limpiar
+            console.log("🟢 [THANKYOU] Después de clearCart:");
+            console.log("   - store.cart:", store.cart);
+            console.log("   - localStorage cart:", localStorage.getItem("cart"));
 
             // 2) Esperar un poco a que el webhook cree la orden
             await new Promise(resolve => setTimeout(resolve, 1500));
