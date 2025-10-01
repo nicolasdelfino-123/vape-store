@@ -345,103 +345,21 @@ const getState = ({ getStore, getActions, setStore }) => {
 			hydrateSession: async () => {
 				const store = getStore();
 				const token = localStorage.getItem("token");
-				console.log("💧 [hydrateSession] INICIO. Token:", token ? "SÍ" : "NO");
-
-				if (!token) {
-					console.log("💧 [hydrateSession] No hay token, no se hidrata sesión");
-					return;
-				}
-
+				if (!token) return;
 				try {
 					const res = await fetch(`${backendUrl}/user/me`, {
 						headers: { "Authorization": `Bearer ${token}` }
 					});
-
 					if (!res.ok) throw new Error("No se pudo hidratar sesión");
-
 					const user = await res.json();
-					console.log("💧 [hydrateSession] Respuesta user:", JSON.stringify(user));
-
-					// ⚠️ Log especial: verificar si backend devuelve carrito
-					if (user.cart) {
-						console.warn("🚨 [hydrateSession] El backend devolvió un CART:", user.cart);
-					}
-
 					setStore({ ...store, user });
-					console.log("💧 [hydrateSession] Store después de setear user:", getStore());
+					try { await getActions().fetchUserAddresses(); } catch { }
 
-					try {
-						await getActions().fetchUserAddresses();
-					} catch (e) {
-						console.error("💧 [hydrateSession] Error fetchUserAddresses:", e);
-					}
 				} catch (e) {
-					console.error("❌ [hydrateSession] ERROR:", e);
 					localStorage.removeItem("token");
 					setStore({ ...store, user: null });
 				}
 			},
-
-			login: async (email, password) => {
-				console.log("🔐 [login] INICIO con", email);
-
-				try {
-					const response = await fetch(`${backendUrl}/user/login`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ email, password })
-					});
-
-					if (!response.ok) {
-						const errorData = await response.json();
-						console.error("❌ [login] Fallo:", errorData);
-						return { success: false, error: errorData.error || "Login fallido" };
-					}
-
-					const data = await response.json();
-					console.log("🔐 [login] Respuesta login:", JSON.stringify(data));
-
-					if (data.access_token) {
-						localStorage.setItem("token", data.access_token);
-
-						try {
-							const userRes = await fetch(`${backendUrl}/user/me`, {
-								headers: { "Authorization": `Bearer ${data.access_token}` }
-							});
-
-							if (userRes.ok) {
-								const userData = await userRes.json();
-								console.log("🔐 [login] Respuesta userData:", JSON.stringify(userData));
-
-								// ⚠️ Log especial: verificar si backend mete carrito
-								if (userData.cart) {
-									console.warn("🚨 [login] El backend devolvió un CART:", userData.cart);
-								}
-
-								const store = getStore();
-								setStore({ ...store, user: userData });
-								console.log("🔐 [login] Store actualizado:", getStore());
-
-								try { await getActions().fetchUserAddresses(); } catch { }
-
-								return { success: true, data: userData };
-							}
-						} catch (userError) {
-							console.error("❌ [login] Error obteniendo datos de usuario:", userError);
-						}
-					}
-
-					// fallback
-					const store = getStore();
-					setStore({ ...store, user: { role: data.role } });
-					return { success: true, data: data };
-
-				} catch (error) {
-					console.error("❌ [login] Error inesperado:", error);
-					return { success: false, error: "ocurrió un error inesperado" };
-				}
-			},
-
 
 			fetchUserAddress: async () => {
 				const token = localStorage.getItem("token");
@@ -625,7 +543,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 			// === ACCIONES DE CARRITO MEJORADAS ===
 			addToCart: (product, quantity = 1) => {
 				const store = getStore();
-				const actions = getActions();
 				const currentCart = store.cart || [];
 				const flavorKey = product.selectedFlavor || '';
 
@@ -659,16 +576,13 @@ const getState = ({ getStore, getActions, setStore }) => {
 				localStorage.setItem('cart', JSON.stringify(updatedCart));
 				console.log("💾 [FLUX] addToCart - Guardado en localStorage:", updatedCart);
 
-				// ✅ Luego actualizar store
+				// ✅ Luego actualizar store (SIN función callback)
 				setStore({
 					...store,
-					cart: updatedCart
+					cart: updatedCart,
+					toast: { isVisible: true, message: "Producto agregado al carrito" }
 				});
-
-				// ✅ Mostrar toast con auto-ocultar
-				actions.showToast("Producto agregado al carrito");
 			},
-
 
 
 			showToast: (message, duration = 3000) => {
@@ -717,39 +631,27 @@ const getState = ({ getStore, getActions, setStore }) => {
 			hydrateCart: () => {
 				console.log("💧 [FLUX] hydrateCart LLAMADO");
 				const local = localStorage.getItem("cart");
-
 				if (local) {
 					try {
 						const parsed = JSON.parse(local);
 						console.log("💧 [FLUX] Carrito parseado:", parsed.length, "items");
-						const store = getStore();
-						setStore({ ...store, cart: parsed });   // 👈 preserva el store
+						setStore({ cart: parsed });
 					} catch (err) {
 						console.error("❌ [FLUX] Error parseando cart:", err);
-						const store = getStore();
-						setStore({ ...store, cart: [] });
+						setStore({ cart: [] });
 					}
 				} else {
 					console.log("⚠️ [FLUX] No había carrito en localStorage → limpiando store");
-					const store = getStore();
-					setStore({ ...store, cart: [] });
+					setStore({ cart: [] });   // 👈 acá queda vacío
 				}
 			},
+
+
 			clearCart: () => {
-				console.log("🧹 [clearCart] INICIO");
-
-				// 1) Vaciar en localStorage
-				localStorage.setItem("cart", JSON.stringify([]));
-
-				// 2) Vaciar en store directamente SIN usar spread
+				console.log("🧹 [FLUX] Limpiando carrito FORZADO");
+				localStorage.removeItem("cart");  // 👈 en vez de setItem([])
 				setStore({ cart: [] });
-
-				// 3) Confirmar log
-				console.log("🧹 [clearCart] Final →", getStore().cart, localStorage.getItem("cart"));
 			},
-
-
-
 
 
 			// Usuario (funciones adicionales)
@@ -783,7 +685,9 @@ const getState = ({ getStore, getActions, setStore }) => {
 					const order = await response.json();
 					const orders = [...store.orders, order];
 
-					// 🔥 Limpia carrito después de compra exitosa
+					// 🔥 Limpia carrito también en localStorage
+					localStorage.removeItem("cart");
+
 					setStore({
 						...store,
 						orders,

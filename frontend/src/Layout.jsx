@@ -52,15 +52,21 @@ const Layout = () => {
     const initializeApp = async () => {
       console.log("🚀 [LAYOUT] Inicializando aplicación...");
 
-      // 1. Hidratar carrito (sincrónico)
-      console.log("🛒 [LAYOUT] Hidratando carrito...");
-      console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localStorage.getItem('cart'));
-      actions.hydrateCart?.();
+      // 1. Hidratar carrito solo si existe en localStorage
+      const localCart = localStorage.getItem('cart');
+      if (localCart && localCart !== "[]") {
+        console.log("🛒 [LAYOUT] Hidratando carrito...");
+        console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localCart);
+        actions.hydrateCart?.();
 
-      // Verificar después de hidratar
-      setTimeout(() => {
-        console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
-      }, 100);
+        // Verificar después de hidratar
+        setTimeout(() => {
+          console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
+        }, 100);
+      } else {
+        console.log("🛒 [LAYOUT] No hay carrito en localStorage → limpiando store");
+        actions.clearCart?.();
+      }
 
       // 2. Hidratar sesión si hay token
       if (actions.hydrateSession) {

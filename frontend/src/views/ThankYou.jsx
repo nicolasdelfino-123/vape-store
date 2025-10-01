@@ -7,27 +7,25 @@ function useQuery() {
 }
 
 export default function ThankYou() {
-    const { store, actions } = useContext(Context);
-
+    const { actions } = useContext(Context);
     const q = useQuery();
     const navigate = useNavigate();
 
     const status = q.get("status");
-    // MP puede enviar el ID como payment_id o collection_id
     const paymentId = q.get("payment_id") || q.get("collection_id");
     const preferenceId = q.get("preference_id");
     const externalRef = q.get("external_reference");
 
+    // Inicial: solo recargar productos
     useEffect(() => {
         const init = async () => {
             console.log("📦 [THANKYOU] Cargando productos...");
             await actions.fetchProducts?.();
-            // ❌ REMOVIDO: Ya no llamamos hydrateCart() acá
-            // El carrito ya está hidratado desde Layout.jsx
         };
         init();
-    }, []); // ← Dependencias vacías, solo se ejecuta una vez al montar
+    }, [actions]);
 
+    // Lógica de pago aprobado
     useEffect(() => {
         if (!status) {
             console.log("⏭️ [THANKYOU] Sin status de pago, saltando lógica de checkout");
@@ -40,30 +38,18 @@ export default function ThankYou() {
             console.log("✅ Pago aprobado - procesando...");
             console.log("💳 Payment ID:", paymentId);
 
-            // 1) Vaciar carrito (acción centralizada)
-            console.log("🧹 [THANKYOU] Limpiando carrito...");
-            actions.clearCart?.();
-
-            // 🔍 Ahora sí log después de limpiar
-            console.log("🟢 [THANKYOU] Después de clearCart:");
-            console.log("   - store.cart:", store.cart);
-            console.log("   - localStorage cart:", localStorage.getItem("cart"));
-
-            // 2) Esperar un poco a que el webhook cree la orden
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // 3) Auto-login con reintentos (por si el webhook tarda)
+            // 1) Auto-login
             if (paymentId) {
-                const maxRetries = 5;   // 5 intentos
-                const delayMs = 1500;   // cada 1.5s
+                const maxRetries = 5;
+                const delayMs = 1500;
                 let ok = false;
 
                 for (let i = 0; i < maxRetries && !ok; i++) {
                     try {
-                        console.log(`🔐 Auto-login intento ${i + 1}/${maxRetries} con payment_id: ${paymentId}`);
+                        console.log(`🔐 Auto-login intento ${i + 1}/${maxRetries}`);
                         const response = await fetch(
                             `${import.meta.env.VITE_BACKEND_URL}/api/mercadopago/auto-login/${paymentId}`,
-                            { method: 'POST' }
+                            { method: "POST" }
                         );
 
                         if (response.ok) {
@@ -76,8 +62,7 @@ export default function ThankYou() {
                                 await actions.hydrateSession();
                             }
                         } else {
-                            const error = await response.json().catch(() => ({}));
-                            console.log("⚠️ Auto-login falló:", error);
+                            console.log("⚠️ Auto-login falló, reintentando...");
                             await new Promise(r => setTimeout(r, delayMs));
                         }
                     } catch (err) {
@@ -87,7 +72,13 @@ export default function ThankYou() {
                 }
             }
 
-            // 4) Recargar órdenes
+            // 2) Vaciar carrito
+            console.log("🧹 [THANKYOU] Limpiando carrito...");
+            actions.clearCart?.();
+            console.log("🟢 [THANKYOU] Después de clearCart:");
+            console.log("   - localStorage cart:", localStorage.getItem("cart"));
+
+            // 3) Recargar órdenes
             if (actions.fetchOrders) {
                 await actions.fetchOrders();
             }
