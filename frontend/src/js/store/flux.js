@@ -701,6 +701,22 @@ const getState = ({ getStore, getActions, setStore }) => {
 				setStore({ ...store, cart });   // ✅ usando store actual
 			},
 
+			resetCartAfterPayment: () => {
+				console.log("🛒 [FLUX] resetCartAfterPayment ejecutado");
+
+				// Limpia el store
+				setStore({ cart: [] });
+
+				// Limpia el localStorage
+				localStorage.setItem("cart", JSON.stringify([]));
+
+				// Opcional: vuelve a hidratar para asegurar consistencia
+				getActions().hydrateCart?.();
+			},
+
+
+
+
 			updateCartQuantity: (productId, quantity, selectedFlavor = '') => {
 				const store = getStore();
 				const cart = store.cart.map((item) =>

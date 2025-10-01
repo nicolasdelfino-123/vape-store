@@ -40,9 +40,10 @@ export default function ThankYou() {
             console.log("✅ Pago aprobado - procesando...");
             console.log("💳 Payment ID:", paymentId);
 
-            // 1) Vaciar carrito (acción centralizada)
-            console.log("🧹 [THANKYOU] Limpiando carrito...");
-            actions.clearCart?.();
+            // 1) Vaciar carrito con la nueva función
+            await actions.resetCartAfterPayment();
+            await new Promise(r => setTimeout(r, 200));
+
 
             // 🔍 Ahora sí log después de limpiar
             console.log("🟢 [THANKYOU] Después de clearCart:");
@@ -52,8 +53,8 @@ export default function ThankYou() {
             // 2) Esperar un poco a que el webhook cree la orden
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // 3) Auto-login con reintentos (por si el webhook tarda)
-            if (paymentId) {
+            // 3) Auto-login con reintentos (solo si NO hay usuario en sesión)
+            if (!store.user && paymentId) {
                 const maxRetries = 5;   // 5 intentos
                 const delayMs = 1500;   // cada 1.5s
                 let ok = false;
@@ -85,6 +86,8 @@ export default function ThankYou() {
                         await new Promise(r => setTimeout(r, delayMs));
                     }
                 }
+            } else {
+                console.log("ℹ️ Usuario ya logueado, se omite auto-login");
             }
 
             // 4) Recargar órdenes

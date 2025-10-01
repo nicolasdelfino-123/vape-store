@@ -52,15 +52,20 @@ const Layout = () => {
     const initializeApp = async () => {
       console.log("🚀 [LAYOUT] Inicializando aplicación...");
 
-      // 1. Hidratar carrito (sincrónico)
-      console.log("🛒 [LAYOUT] Hidratando carrito...");
-      console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localStorage.getItem('cart'));
-      actions.hydrateCart?.();
+      // 1. Hidratar carrito (solo si no venimos de thank-you)
+      const skipHydrate = window.location.pathname.includes("thank-you");
+      if (!skipHydrate) {
+        console.log("🛒 [LAYOUT] Hidratando carrito...");
+        console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localStorage.getItem('cart'));
+        actions.hydrateCart?.();
 
-      // Verificar después de hidratar
-      setTimeout(() => {
-        console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
-      }, 100);
+        // Verificar después de hidratar
+        setTimeout(() => {
+          console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
+        }, 100);
+      } else {
+        console.log("⏭️ [LAYOUT] Saltando hydrateCart porque venimos de thank-you");
+      }
 
       // 2. Hidratar sesión si hay token
       if (actions.hydrateSession) {
@@ -96,6 +101,7 @@ const Layout = () => {
 
     initializeApp();
   }, []); // Solo al montar la app
+
 
   return (
     <div>

@@ -342,35 +342,34 @@ def webhook():
 
 @mercadopago_bp.route('/auto-login/<payment_id>', methods=['POST'])
 def auto_login_by_payment(payment_id):
-    """Auto-login temporal después de pago exitoso"""
     try:
         from flask_jwt_extended import create_access_token
         from datetime import timedelta
-        
+
         print(f"🔐 Intentando auto-login para payment_id: {payment_id}")
-        
-        # Buscar orden por payment_id
+
+        # Buscar por payment_id o fallback external_reference
         order = Order.query.filter_by(payment_id=str(payment_id)).first()
-        
         if not order:
-            print(f"❌ Orden no encontrada para payment_id: {payment_id}")
+            order = Order.query.filter_by(external_reference=str(payment_id)).first()
+
+        if not order:
+            print(f"❌ Orden no encontrada para payment_id o external_ref={payment_id}")
             return jsonify({'error': 'Orden no encontrada'}), 404
-        
+
         if not order.user_id:
             print(f"❌ Orden {order.id} sin user_id")
             return jsonify({'error': 'Usuario no asociado'}), 404
-        
-        # Generar token temporal (1 hora)
+
         token = create_access_token(
-            identity=str(order.user_id),  # 👈 evitar 422: 'sub' debe ser string
+            identity=str(order.user_id),
             expires_delta=timedelta(hours=1)
         )
 
-        
         user = User.query.get(order.user_id)
-        
+
         print(f"✅ Token generado para usuario {user.id} ({user.email})")
-        
+
         return jsonify({
             'token': token,
             'user': {
@@ -379,12 +378,12 @@ def auto_login_by_payment(payment_id):
                 'name': user.name
             }
         }), 200
-        
+
     except Exception as e:
         import traceback
         print(f"💥 Error en auto_login: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
-    
+
 
 
 def create_order_from_payment(payment_data):

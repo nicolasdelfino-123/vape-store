@@ -72,11 +72,19 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
     console.log('  - store.cart.length:', store.cart?.length || 0);
     console.log('  - localStorage cart:', localStorage.getItem('cart'));
 
+    // 🚨 SOLO una vez al montar el componente
+    if (window.location.pathname.includes("thank-you")) {
+      console.log("⏭️ [CART] Vaciando forzosamente carrito por thank-you (solo al montar)");
+      actions.resetCartAfterPayment?.();
+    }
+
     if (Array.isArray(store.cart) && store.cart.length === 0) {
       console.log('🧹 [CART] Forzando limpieza de localStorage porque carrito está vacío');
       localStorage.setItem("cart", JSON.stringify([]));
     }
-  }, [store.cart]);
+    // 👇 OJO: [] vacío => se ejecuta solo al montar
+  }, []);
+
 
 
   if (!controlledOpen && !isRouteMode && controlledOpen !== false) return null;
