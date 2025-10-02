@@ -384,7 +384,7 @@ def auto_login_by_payment(payment_id):
         print(f"💥 Error en auto_login: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
-
+#ACA EMPIEZO
 
 def create_order_from_payment(payment_data):
     """

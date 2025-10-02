@@ -397,6 +397,10 @@ def me_update():
             return jsonify({"error": "Contraseña actual incorrecta"}), 400
         user.password = bcrypt.generate_password_hash(new).decode("utf-8")
 
+    # 👇 AGREGAR ESTO: Cambio directo de contraseña (para reset desde frontend)
+    elif data.get("password"):
+        user.password = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
+
     db.session.commit()
     return jsonify(user.serialize()), 200
 

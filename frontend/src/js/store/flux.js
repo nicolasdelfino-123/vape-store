@@ -340,7 +340,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 
 
-
+			/* ACA EMPIEZO A */
 
 			hydrateSession: async () => {
 				const store = getStore();
@@ -485,6 +485,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 			},
 
 			// 🔥 MEJORAR: Logs más detallados para debugging
+			// En flux.js, action updateAccountDetails (línea ~295 aprox)
 			updateAccountDetails: async (userData) => {
 				const token = localStorage.getItem("token");
 				console.log("🔧 Actualizando cuenta:", { token: token ? "✅" : "❌", userData });
@@ -496,8 +497,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 
 				try {
-					console.log("📤 Enviando PUT a:", `${backendUrl}/user/me`);
-
 					const res = await fetch(`${backendUrl}/user/me`, {
 						method: "PUT",
 						headers: {
@@ -506,8 +505,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 						},
 						body: JSON.stringify(userData)
 					});
-
-					console.log("📥 Respuesta:", res.status, res.statusText);
 
 					const store = getStore();
 
@@ -521,13 +518,12 @@ const getState = ({ getStore, getActions, setStore }) => {
 					const updatedUser = await res.json();
 					console.log("✅ Usuario actualizado:", updatedUser);
 
-					// 🔥 IMPORTANTE: Actualizar store con datos completos
 					setStore({
 						...store,
-						user: updatedUser, // Datos actualizados del usuario
+						user: updatedUser,
 						updateStatusMsg: "Datos actualizados correctamente"
 					});
-					return true;
+					return true; // 👈 Retornar true explícito
 				} catch (e) {
 					console.error("❌ Error en updateAccountDetails:", e);
 					const store = getStore();
@@ -535,7 +531,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 					return false;
 				}
 			},
-
 			sendPasswordSetupEmail: async (email) => {
 				try {
 					const response = await fetch(`${backendUrl}/user/register-email`, {

@@ -75,7 +75,12 @@ export default function ThankYou() {
 
                             if (actions.hydrateSession) {
                                 await actions.hydrateSession();
+
+                                // 👇 Marcar en localStorage que el usuario necesita cambiar contraseña
+                                localStorage.setItem('needs_password_reset', 'true');
+                                console.log("🔥 FLAG localStorage seteado: needs_password_reset=true");
                             }
+
                         } else {
                             const error = await response.json().catch(() => ({}));
                             console.log("⚠️ Auto-login falló:", error);
