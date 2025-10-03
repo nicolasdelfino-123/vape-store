@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import injectContext, { Context } from "./js/store/appContext.jsx";
 
@@ -36,30 +36,59 @@ import LoginAdmin from "./views/LoginAdmin.jsx";
 import FloatingButtons from "./components/FloatingButtons.jsx";
 import Mayorista from "./views/Mayorista.jsx";
 import ThankYou from "./views/ThankYou.jsx";
-// Layout principal que envuelve toda la app
 
+// 🔥 NUEVO: Spinner + imágenes de Inicio
+import Spinner from "./components/Spinner.jsx";
+import heroBg from '@/assets/hero-bg.png';
+import banner1 from '@/assets/banner-1.png';
+import recargables from '@/assets/recargables.png';
+import celu from '@/assets/celu.png';
+import desechables from '@/assets/desechables.png';
+import perfumes from '@/assets/perfumes.png';
+import accesorios from '@/assets/accesorios.png';
+import liquidos from '@/assets/liquidos.png';
 
+// 🔥 Componente helper para Inicio con fade suave
+const InicioWithSpinner = ({ images }) => {
+  const [showPage, setShowPage] = useState(false);
 
+  return (
+    <>
+      <Spinner
+        images={images}
+        minDelay={800}
+        onLoadComplete={() => setShowPage(true)}
+      />
+      <div
+        className={showPage ? 'opacity-100' : 'opacity-0'}
+        style={{
+          transition: 'opacity 3s ease-in-out',
+          willChange: 'opacity'
+        }}
+      >
+        <Inicio />
+      </div>
+    </>
+  );
+};
 
 const Layout = () => {
   const { store, actions } = useContext(Context);
   const basename = import.meta.env.VITE_BASENAME || "";
 
-  // 🔥 MEJORAR: Hidratar sesión al cargar la app
+  // 🔥 Array de imágenes pesadas para el Spinner
+  const inicioImages = [heroBg, banner1, recargables, celu, desechables, perfumes, accesorios, liquidos];
 
-  // 🔥 Hidratar carrito al montar
   useEffect(() => {
     const initializeApp = async () => {
       console.log("🚀 [LAYOUT] Inicializando aplicación...");
 
-      // 1. Hidratar carrito (solo si no venimos de thank-you)
       const skipHydrate = window.location.pathname.includes("thank-you");
       if (!skipHydrate) {
         console.log("🛒 [LAYOUT] Hidratando carrito...");
         console.log("🛒 [LAYOUT] localStorage ANTES de hidratar:", localStorage.getItem('cart'));
         actions.hydrateCart?.();
 
-        // Verificar después de hidratar
         setTimeout(() => {
           console.log("🛒 [LAYOUT] store.cart DESPUÉS de hidratar:", store.cart);
         }, 100);
@@ -67,7 +96,6 @@ const Layout = () => {
         console.log("⏭️ [LAYOUT] Saltando hydrateCart porque venimos de thank-you");
       }
 
-      // 2. Hidratar sesión si hay token
       if (actions.hydrateSession) {
         console.log("💧 [LAYOUT] Hidratando sesión...");
         console.log("💧 [LAYOUT] Token en localStorage:", localStorage.getItem('token') ? 'SÍ' : 'NO');
@@ -75,14 +103,12 @@ const Layout = () => {
         console.log("💧 [LAYOUT] Usuario después de hidratar:", store.user?.email || 'No logueado');
       }
 
-      // 3. Cargar categorías desde API
       if (actions.fetchCategoriesFromAPI) {
         console.log("📂 [LAYOUT] Cargando categorías...");
         await actions.fetchCategoriesFromAPI();
         console.log("📂 [LAYOUT] Categorías cargadas:", store.categories?.length || 0);
       }
 
-      // 4. Cargar productos si no están cargados
       if (actions.fetchProducts && (!store.products || store.products.length === 0)) {
         console.log("📦 [LAYOUT] Cargando productos...");
         await actions.fetchProducts();
@@ -100,8 +126,7 @@ const Layout = () => {
     };
 
     initializeApp();
-  }, []); // Solo al montar la app
-
+  }, []);
 
   return (
     <div>
@@ -110,13 +135,15 @@ const Layout = () => {
         <Header />
 
         <Routes>
-          {/* ===== Rutas que ya tenías ===== */}
-          <Route exact path="/" element={<Inicio />} />
+          {/* 🔥 MODIFICADO: Agregamos fade suave */}
+          <Route exact path="/" element={<InicioWithSpinner images={inicioImages} />} />
+          <Route path="/inicio" element={<InicioWithSpinner images={inicioImages} />} />
+
+          {/* Resto sin cambios */}
           <Route path="/login" element={<Login />} />
           <Route path="/setup-password" element={<SetupPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/inicio" element={<Inicio />} />
           <Route path="/products" element={<ProductGrid />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
@@ -134,27 +161,18 @@ const Layout = () => {
           <Route path="/pago/pendiente" element={<ThankYou />} />
           <Route path="/thank-you" element={<ThankYou />} />
 
-
-
-          {/* ===== Mi Cuenta con subrutas ===== */}
           <Route path="/cuenta" element={<AccountLayout />}>
-            {/* Escritorio */}
             <Route index element={<Dashboard />} />
-            {/* Pedidos: listado y detalle */}
             <Route path="pedidos" element={<OrderListPage />} />
             <Route path="pedidos/:orderId" element={<OrderDetailPage />} />
-            {/* Direcciones */}
             <Route path="direcciones" element={<AddressesPage />} />
-            {/* Detalles de la cuenta */}
             <Route path="detalles" element={<AccountDetailsPage />} />
-            {/* Cerrar sesión */}
             <Route path="cerrar" element={<Logout />} />
           </Route>
 
         </Routes>
         <Footer />
 
-        {/* Toast global */}
         <Toast
           message={store.toast?.message || ""}
           isVisible={store.toast?.isVisible || false}
