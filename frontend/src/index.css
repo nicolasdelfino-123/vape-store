@@ -111,3 +111,67 @@ body {
   flex: 1;
   padding: 0;
 }
+
+/* Forzar estilos en inputs, selects y buttons para móviles */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+input[type="range"],
+input[type="checkbox"],
+select,
+button {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  color-scheme: light !important;
+}
+
+/* Checkboxes necesitan un tratamiento especial */
+input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.25rem !important;
+  background-color: #ffffff !important;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #9333ea !important;
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e") !important;
+}
+
+/* Placeholders */
+input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Específicamente para modo oscuro en móviles */
+@media (prefers-color-scheme: dark) {
+
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  input[type="range"],
+  input[type="checkbox"],
+  select,
+  button {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    color-scheme: light !important;
+  }
+
+  input[type="checkbox"]:checked {
+    background-color: #9333ea !important;
+  }
+
+  select option {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  input::placeholder {
+    color: #9ca3af !important;
+  }
+}

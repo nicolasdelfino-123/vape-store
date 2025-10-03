@@ -311,7 +311,7 @@ const Checkout = () => {
                 <div className="space-y-6">
                     {/* Detalles de facturación */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-semibold mb-4">Detalles de facturación</h2>
+                        <h2 className="text-xl font-semibold mb-4">Detalles de envío</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
