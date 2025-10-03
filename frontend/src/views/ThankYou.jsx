@@ -70,17 +70,13 @@ export default function ThankYou() {
                         if (response.ok) {
                             const data = await response.json();
                             localStorage.setItem("token", data.token);
-                            console.log("✅ Auto-login exitoso");
+                            localStorage.setItem('needs_password_reset', 'true'); // 👈 MOVIDO ACÁ
+                            console.log("✅ Auto-login exitoso + flag password reset");
                             ok = true;
 
                             if (actions.hydrateSession) {
                                 await actions.hydrateSession();
-
-                                // 👇 Marcar en localStorage que el usuario necesita cambiar contraseña
-                                localStorage.setItem('needs_password_reset', 'true');
-                                console.log("🔥 FLAG localStorage seteado: needs_password_reset=true");
                             }
-
                         } else {
                             const error = await response.json().catch(() => ({}));
                             console.log("⚠️ Auto-login falló:", error);

@@ -38,6 +38,7 @@ class User(db.Model):
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     is_premium: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
+    must_reset_password: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
 
     def serialize(self):
         return {
@@ -54,6 +55,7 @@ class User(db.Model):
             'is_active': self.is_active,
             'is_premium': self.is_premium,
             'is_admin': self.is_admin,
+            'must_reset_password': self.must_reset_password,
         }
 
 

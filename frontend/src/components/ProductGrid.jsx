@@ -393,7 +393,7 @@ export default function ProductGrid({ category, hideFilters = false }) {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-700 font-bold">Mostrar:</span>
                   <div className="flex gap-1">
-                    {[9, 12, 18, 24].map(num => (
+                    {[8, 12, 16, 24].map(num => (
                       <button
                         key={num}
                         onClick={() => setItemsPerPage(num)}

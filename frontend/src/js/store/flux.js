@@ -188,56 +188,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
-			login: async (email, password) => {
-				try {
-					const response = await fetch(`${backendUrl}/user/login`, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json"
-						},
-						body: JSON.stringify({
-							email,
-							password
-						})
-					})
-					if (!response.ok) {
-						const errorData = await response.json();
-						return { success: false, error: errorData.error || "Login fallido" };
-					}
-					const data = await response.json();
-
-					if (data.access_token) {
-						localStorage.setItem("token", data.access_token);
-
-						// Obtener datos completos del usuario
-						try {
-							const userRes = await fetch(`${backendUrl}/user/me`, {
-								headers: { "Authorization": `Bearer ${data.access_token}` }
-							});
-							if (userRes.ok) {
-								const userData = await userRes.json();
-								const store = getStore();
-								setStore({ ...store, user: userData });
-								// cargar direcciones del usuario
-								try { await getActions().fetchUserAddresses(); } catch { }
-
-								return { success: true, data: userData };
-							}
-						} catch (userError) {
-							console.log("Error obteniendo datos de usuario:", userError);
-						}
-					}
-
-					// Fallback si falla la obtención de datos del usuario
-					const store = getStore();
-					setStore({ ...store, user: { role: data.role } });
-					return { success: true, data: data };
-
-				} catch (error) {
-					return { success: false, error: "ocurrió un error inesperado" };
-				}
-			},
-
 
 
 			// Login para administradores
@@ -403,6 +353,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 					if (data.access_token) {
 						localStorage.setItem("token", data.access_token);
+						localStorage.removeItem('needs_password_reset'); // 👈 NUEVO: limpiar flag en login normal
 
 						try {
 							const userRes = await fetch(`${backendUrl}/user/me`, {
@@ -413,7 +364,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 								const userData = await userRes.json();
 								console.log("🔐 [login] Respuesta userData:", JSON.stringify(userData));
 
-								// ⚠️ Log especial: verificar si backend mete carrito
 								if (userData.cart) {
 									console.warn("🚨 [login] El backend devolvió un CART:", userData.cart);
 								}
@@ -441,7 +391,6 @@ const getState = ({ getStore, getActions, setStore }) => {
 					return { success: false, error: "ocurrió un error inesperado" };
 				}
 			},
-
 
 			fetchUserAddress: async () => {
 				const token = localStorage.getItem("token");

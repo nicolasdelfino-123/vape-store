@@ -382,6 +382,10 @@ def me_update():
     if nombre_nuevo:
         user.name = nombre_nuevo
 
+    # 👇 NUEVO: Si viene el campo must_reset_password, actualizarlo
+    if "must_reset_password" in data:
+        user.must_reset_password = bool(data["must_reset_password"])
+
     # cambio de contraseña (opcional)
     current = data.get("current_password")
     new = data.get("new_password")
@@ -392,17 +396,16 @@ def me_update():
             return jsonify({"error": "Completá todos los campos de contraseña"}), 400
         if new != confirm:
             return jsonify({"error": "La nueva contraseña no coincide"}), 400
-        # Verificar con bcrypt (hash guardado en DB)
         if not bcrypt.check_password_hash(user.password, current):
             return jsonify({"error": "Contraseña actual incorrecta"}), 400
         user.password = bcrypt.generate_password_hash(new).decode("utf-8")
 
-    # 👇 AGREGAR ESTO: Cambio directo de contraseña (para reset desde frontend)
     elif data.get("password"):
         user.password = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
 
     db.session.commit()
     return jsonify(user.serialize()), 200
+
 
 @user_bp.route("/address", methods=["GET"])
 @jwt_required()

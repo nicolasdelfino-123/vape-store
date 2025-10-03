@@ -63,21 +63,7 @@ export default function Dashboard() {
                 <p className="mb-6 text-sm text-gray-600">
                     Desde el escritorio podés ver tus pedidos recientes y acceder rápidamente a tu información.
                 </p>
-                {(store.user?.must_reset_password || localStorage.getItem('needs_password_reset') === 'true') && (
-                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
-                        ⚠️ Tu contraseña es temporal.
-                        <Link
-                            to={`/reset-password/temp-${store.user.id}`}
-                            onClick={() => {
-                                localStorage.removeItem('needs_password_reset');
-                                console.log("🧹 Flag needs_password_reset limpiado");
-                            }}
-                            className="ml-2 underline text-purple-700 font-semibold"
-                        >
-                            Crear nueva contraseña
-                        </Link>
-                    </div>
-                )}
+
 
 
                 {/* Cards de acceso */}

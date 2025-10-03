@@ -452,7 +452,8 @@ def create_order_from_payment(payment_data):
                 password=generate_password_hash('temp123'),
                 name=full_name,
                 shipping_address={"address": mp_address},
-                is_active=True
+                is_active=True,
+                must_reset_password=True
             )
             session.add(user)
             session.flush()

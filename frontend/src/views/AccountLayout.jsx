@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Context } from '../js/store/appContext.jsx';
+import { Link } from "react-router-dom";
 
 const linkStyle = ({ isActive }) =>
     "block px-4 py-2 rounded-md text-sm " +
@@ -8,10 +9,32 @@ const linkStyle = ({ isActive }) =>
 
 export default function AccountLayout() {
     const { store } = useContext(Context);
+    const [showWarning, setShowWarning] = useState(false);
+
+    useEffect(() => {
+        setShowWarning(store.user?.must_reset_password === true);
+    }, [store.user]);
+
+
     if (!store.user) return <Navigate to="/login" replace />;
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {showWarning && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
+                    ⚠️ Tu contraseña es temporal.
+                    <Link
+                        to={`/reset-password/temp-${store.user.id}`}
+                        onClick={() => {
+                            localStorage.removeItem('needs_password_reset');
+                        }}
+                        className="ml-2 underline text-purple-700 font-semibold"
+                    >
+                        Crear nueva contraseña
+                    </Link>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <aside className="lg:col-span-3">
                     <h2 className="text-lg font-semibold mb-4">MI CUENTA</h2>
