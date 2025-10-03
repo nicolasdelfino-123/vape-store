@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import { Menu, X } from "lucide-react"
 
+
 const CATEGORIES = [
     { id: 1, name: "Vapes Desechables", slug: "vapes-desechables" },
     { id: 2, name: "Pods Recargables", slug: "pods-recargables" },
@@ -211,7 +212,7 @@ export default function SidebarFilters({
                             <li key={c.slug}>
                                 <button
                                     onClick={() => { onSelectCategory?.(c.slug); setOpen(false) }}
-                                    className={`w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${active ? "bg-gray-100 font-medium" : ""}`}
+                                    className={`w-full text-left px-2 py-1 rounded hover:bg-purple-50 transition-colors ${active ? "bg-purple-200 text-purple-700 font-semibold" : "text-gray-900"}`}
                                 >
                                     {c.name}
                                 </button>

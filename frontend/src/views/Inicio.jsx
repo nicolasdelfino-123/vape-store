@@ -393,14 +393,15 @@ function Inicio() {
             <section id="productos" className="py-8 md:py-16 animate-fade-in-scroll">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="mb-8 md:mb-12">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4">Productos Destacados</h2>
+                        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4">¡Productos Destacados!</h2>
                         <div className="flex flex-col md:flex-row md:items-center md:gap-4 md:justify-start w-full md:w-auto">
                             <input
                                 type="text"
                                 placeholder="Buscar productos..."
                                 value={productSearch}
                                 onChange={e => setProductSearch(e.target.value)}
-                                className="mb-4 md:mb-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-full md:w-64"
+                                className="mb-4 md:mb-0 px-3 py-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-full md:w-64"
+                                style={{ border: "1px solid #9ca5b5ff" }}
                             />
                         </div>
                     </div>
@@ -429,7 +430,8 @@ function Inicio() {
                     {/* Ver más productos */}
                     <div className="text-center mt-8">
                         <Link
-                            to="/categoria/pod-descartables-desechables"
+                            to="/categoria/vapes-desechables"
+                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                             className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
                         >
                             Ver todos los productos
