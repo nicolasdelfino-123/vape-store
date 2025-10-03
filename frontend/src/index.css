@@ -132,7 +132,6 @@ body {
     background-color: #ffffff !important;
     color: #111827 !important;
     color-scheme: light !important;
-
   }
 
   /* Botones: SOLO los que no tengan clase de color (bg-purple, bg-white, etc) */
@@ -163,6 +162,19 @@ body {
   input::placeholder {
     color: #9ca3af !important;
   }
+
+  /* Opciones de select en móviles */
+  select option {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Botones de navegación de páginas */
+  button[aria-label="Página anterior"] svg,
+  button[aria-label="Página siguiente"] svg {
+    color: #9333ea !important;
+    stroke: #9333ea !important;
+  }
 }
 
 /* Específicamente para modo oscuro EN MÓVILES */
@@ -189,6 +201,7 @@ body {
     background-color: #9333ea !important;
   }
 
+  /* Opciones de select en modo oscuro móvil */
   select option {
     background-color: #ffffff !important;
     color: #111827 !important;
@@ -196,15 +209,5 @@ body {
 
   input::placeholder {
     color: #9ca3af !important;
-  }
-}
-
-@media screen and (max-width: 768px) {
-
-  /* Botones de navegación de páginas */
-  button[aria-label="Página anterior"] svg,
-  button[aria-label="Página siguiente"] svg {
-    color: #9333ea !important;
-    stroke: #9333ea !important;
   }
 }
