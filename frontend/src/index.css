@@ -211,3 +211,24 @@ body {
     color: #9ca3af !important;
   }
 }
+
+@media screen and (max-width: 768px) {
+
+  /* Botones de categorías en el sidebar (mobile) */
+  .sidebar-categories button {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .sidebar-categories button:hover {
+    background-color: #f3f4f6 !important;
+    /* gris claro al hover */
+  }
+
+  .sidebar-categories button.bg-purple-200 {
+    background-color: #e9d5ff !important;
+    /* violeta clarito */
+    color: #6b21a8 !important;
+    /* texto violeta oscuro */
+  }
+}

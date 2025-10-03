@@ -203,7 +203,7 @@ export default function SidebarFilters({
             )}
 
             {/* Categorías */}
-            <div>
+            <div className="sidebar-categories">
                 <h4 className="text-sm font-semibold mb-2 uppercase tracking-wide">Categorías</h4>
                 <ul className="space-y-2">
                     {CATEGORIES.map(c => {
@@ -212,7 +212,10 @@ export default function SidebarFilters({
                             <li key={c.slug}>
                                 <button
                                     onClick={() => { onSelectCategory?.(c.slug); setOpen(false) }}
-                                    className={`w-full text-left px-2 py-1 rounded hover:bg-purple-50 transition-colors ${active ? "bg-purple-200 text-purple-700 font-semibold" : "text-gray-900"}`}
+                                    className={`w-full text-left px-2 py-1 rounded transition-colors ${active
+                                            ? "bg-purple-200 text-purple-700 font-semibold"
+                                            : "text-gray-900"
+                                        }`}
                                 >
                                     {c.name}
                                 </button>
@@ -221,6 +224,7 @@ export default function SidebarFilters({
                     })}
                 </ul>
             </div>
+
 
             {/* Precio */}
             <div>
