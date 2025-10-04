@@ -172,8 +172,24 @@ const Checkout = () => {
 
     // Totales
     const subtotal = store.cart?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
-    const shippingCost = 0
-    const total = subtotal + shippingCost
+    // Recuperar si viene marcado pickup desde el Cart
+    const pickup = store.pickup || JSON.parse(localStorage.getItem("pickup") || "false");
+
+    // Normalizamos la ciudad para evitar mayúsculas/minúsculas
+    const billingCity = (billing.city || "").trim().toLowerCase();
+
+    let shippingCost = 6000; // costo por defecto
+
+    if (pickup) {
+        // Caso 1: marcó retiro en tienda
+        shippingCost = 0;
+    } else if (billingCity.includes("las varillas")) {
+        // Caso 2: no pickup pero ciudad es Las Varillas
+        shippingCost = 0;
+    }
+
+    const total = subtotal + shippingCost;
+
 
     // Validaciones mínimas
     const billingValid =
@@ -410,6 +426,15 @@ const Checkout = () => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        window.open("https://www.correoargentino.com.ar/formularios/cpa", "_blank")
+                                    }
+                                    className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
+                                >
+                                    No sé mi código postal
+                                </button>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
@@ -668,8 +693,12 @@ const Checkout = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span>Envío:</span>
-                                <span className="text-green-600">Gratis</span>
+                                <span className={shippingCost === 0 ? "text-green-600" : ""}>
+                                    {shippingCost === 0 ? "Gratis" : `$${shippingCost.toLocaleString()}`}
+                                </span>
                             </div>
+
+
                             <div className="flex justify-between text-lg font-bold border-t pt-2">
                                 <span>Total:</span>
                                 <span>${total.toLocaleString()}</span>

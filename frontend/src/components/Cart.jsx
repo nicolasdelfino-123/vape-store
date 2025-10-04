@@ -214,48 +214,23 @@ export default function Cart({ isOpen: controlledOpen, onClose: controlledOnClos
           </span>
         </div>
 
-        {/* Medios de envío */}
-        <div className="pt-2">
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <span>Medios de envío</span>
-          </h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="Tu código postal"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              className="flex-1 border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-200"
-            />
-            <button
-              onClick={() => actions.showToast?.("Cálculo de envío próximamente")}
-              className="px-4 sm:px-5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-            >
-              CALCULAR
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              window.open("https://www.correoargentino.com.ar/formularios/cpa", "_blank")
-            }
-            className="mt-2 text-sm text-gray-500 underline hover:text-gray-700"
-          >
-            No sé mi código postal
-          </button>
-        </div>
+
+
 
         {/* Nuestro local */}
         <div>
-          <h3 className="font-semibold mb-2">Nuestro local</h3>
+          <h3 className="font-semibold mb-2">Retiro en nuestro local</h3>
           <label className="flex items-start gap-3 bg-white border rounded-lg p-3 sm:p-4 shadow-sm">
             <input
               type="checkbox"
               checked={pickup}
-              onChange={(e) => setPickup(e.target.checked)}
-              className="mt-1"
+              className="mt-1 size-4"
+              onChange={(e) => {
+                setPickup(e.target.checked);
+                actions.setPickup(e.target.checked); // 👈 guardamos en store
+              }}
             />
+
             <div className="flex-1">
               <p className="text-sm sm:text-base">
                 Local Zarpados - Velez Sarsfield 303

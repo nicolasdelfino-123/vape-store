@@ -332,6 +332,12 @@ const getState = ({ getStore, getActions, setStore }) => {
 				}
 			},
 
+			setPickup: (value) => {
+				const store = getStore();
+				setStore({ ...store, pickup: value });
+				localStorage.setItem("pickup", JSON.stringify(value));
+			},
+
 			login: async (email, password) => {
 				console.log("🔐 [login] INICIO con", email);
 
