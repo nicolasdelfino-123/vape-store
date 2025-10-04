@@ -3,6 +3,7 @@ import React, { useState, useContext, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Context } from '../js/store/appContext'
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react'
+import logo from '@/assets/mp-logo1.png';
 
 const provincesAR = [
     "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", "Entre Ríos",
@@ -323,8 +324,10 @@ const Checkout = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Finalizar Compra</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
                 {/* COLUMN IZQ: Formulario */}
-                <div className="space-y-6">
+                <form className="space-y-6">
+
                     {/* Detalles de facturación */}
                     <div className="bg-white p-6 rounded-lg shadow-md">
                         <h2 className="text-xl font-semibold mb-4">Detalles de envío</h2>
@@ -645,9 +648,9 @@ const Checkout = () => {
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
 
+                    )}
+                </form>
                 {/* COLUMN DER: Resumen + Pago */}
                 <div className="space-y-6">
                     {/* Resumen */}
@@ -720,9 +723,9 @@ const Checkout = () => {
                                     />
                                     <div className="ml-3 flex items-center">
                                         <img
-                                            src="https://logodownload.org/wp-content/uploads/2018/03/mercadopago-logo-0.png"
+                                            src={logo}
                                             alt="MercadoPago"
-                                            className="h-8 w-auto mr-3"
+                                            className="h-12 w-auto mr-3"
                                         />
                                         <div>
                                             <span className="font-medium text-gray-900">Pagar con MercadoPago</span>
@@ -735,15 +738,22 @@ const Checkout = () => {
 
                         {!preferenceId ? (
                             <button
-                                onClick={createPreference}
-                                disabled={!isFormValid() || loading}
-                                className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${isFormValid() && !loading
-                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    }`}
+                                type="submit"
+                                onClick={(e) => {
+                                    e.preventDefault(); // prevenimos submit por defecto
+                                    if (document.querySelector("form")?.checkValidity()) {
+                                        createPreference();
+                                    } else {
+                                        // esto fuerza al navegador a mostrar los mensajes "Completa este campo"
+                                        document.querySelector("form")?.reportValidity();
+                                    }
+                                }}
+                                className="w-full py-3 px-4 rounded-lg font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-colors"
                             >
                                 {loading ? 'Procesando...' : 'Continuar al pago'}
                             </button>
+
+
                         ) : (
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600 text-center">
@@ -761,11 +771,13 @@ const Checkout = () => {
                                     />
                                 </div>
                             </div>
+
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
+
     )
 }
 
