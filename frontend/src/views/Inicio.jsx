@@ -3,7 +3,7 @@ import { Context } from '../js/store/appContext.jsx';
 import { Link } from "react-router-dom";
 import ProductCard from '../components/ProductCard.jsx';
 import { useLocation } from "react-router-dom";
-import heroBg from '@/assets/hero-bg.png'
+import heroBg from '@/assets/hero-final-1.png'
 import banner1 from '@/assets/banner-1.png'
 import recargables from '@/assets/recargables.png'
 import celu from '@/assets/celu.png'
@@ -110,6 +110,7 @@ function Inicio() {
                         className="w-full h-full object-cover opacity-30"
                         loading="eager"
                         decoding="async"
+
                     />
                 </div>
                 {/* Content */}
