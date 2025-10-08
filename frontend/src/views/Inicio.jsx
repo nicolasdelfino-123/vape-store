@@ -238,20 +238,20 @@ function Inicio() {
             {/* Categorías (cards con imagen + botón VER) */}
             <section className="py-6 md:py-10 fade-in-section" id="categorias-animadas">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    {/* GRID GENERAL */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:max-w-5xl lg:mx-auto">
 
-                        {/* PODS RECARGABLES */}
+                        {/* === PODS RECARGABLES === */}
                         <Link
                             to="/categoria/pods-recargables"
                             className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             aria-label="Ir a Pods Recargables"
                         >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02] rounded-xl"
                                 style={{ backgroundImage: `url(${recargables})` }}
                                 aria-hidden
                             />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
                             <div className="relative h-full flex items-center">
                                 <div className="px-5">
                                     <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
@@ -266,40 +266,39 @@ function Inicio() {
 
                         {/* CELULARES */}
                         {/* <Link
-                            to="/categoria/celulares"
-                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            aria-label="Ir a Celulares"
-                        >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: `url(${celu})` }}
-                                aria-hidden
-                            />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
-                            <div className="relative h-full flex items-start">
-                                <div className="px-5 py-4 flex flex-col gap-2 h-full">
-                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                        CELULARES
-                                    </h3>
-                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
-                                        VER
-                                    </span>
-                                </div>
-                            </div>
-                        </Link> */}
+        to="/categoria/celulares"
+        className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        aria-label="Ir a Celulares"
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02] rounded-xl"
+          style={{ backgroundImage: `url(${celu})` }}
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
+        <div className="relative h-full flex items-start">
+          <div className="px-5 py-4 flex flex-col gap-2 h-full">
+            <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+              CELULARES
+            </h3>
+            <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+              VER
+            </span>
+          </div>
+        </div>
+      </Link> */}
 
-                        {/* VAPES DESECHABLES */}
+                        {/* === PODS DESECHABLES === */}
                         <Link
                             to="/categoria/vapes-desechables"
                             className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             aria-label="Ir a Vapes Desechables"
                         >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02] rounded-xl"
                                 style={{ backgroundImage: `url(${desechables})` }}
                                 aria-hidden
                             />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
                             <div className="relative h-full flex items-center">
                                 <div className="px-5">
                                     <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
@@ -312,18 +311,17 @@ function Inicio() {
                             </div>
                         </Link>
 
-                        {/* PERFUMES */}
+                        {/* === PERFUMES === */}
                         <Link
                             to="/categoria/perfumes"
                             className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             aria-label="Ir a Perfumes"
                         >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
+                            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02] rounded-xl"
                                 style={{ backgroundImage: `url(${perfumes})` }}
                                 aria-hidden
                             />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
+                            <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
                             <div className="relative h-full flex items-start">
                                 <div className="px-5 py-4 flex flex-col gap-2">
                                     <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
@@ -336,57 +334,58 @@ function Inicio() {
                             </div>
                         </Link>
 
-                        {/* RESISTENCIAS */}
-                        <Link
-                            to="/categoria/resistencias"
-                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            aria-label="Ir a Resistencias"
-                        >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: `url(${accesorios})` }} /* podés cambiar a una imagen “resistencias” */
-                                aria-hidden
-                            />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
-                            <div className="relative h-full flex items-start">
-                                <div className="px-5 py-4 flex flex-col gap-2">
-                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                        RESISTENCIAS
-                                    </h3>
-                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
-                                        VER
-                                    </span>
+                        {/* === FILA INFERIOR: RESISTENCIAS + LÍQUIDOS === */}
+                        <div className="col-span-full flex flex-col sm:flex-row justify-center items-center gap-4 md:gap-6 lg:mt-0">
+                            {/* RESISTENCIAS */}
+                            <Link
+                                to="/categoria/resistencias"
+                                className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 w-full sm:w-[20rem] md:w-[22rem] focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                aria-label="Ir a Resistencias"
+                            >
+                                <div className="absolute inset-0 rounded-xl overflow-hidden">
+                                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]" style={{ backgroundImage: `url(${accesorios})` }} aria-hidden />
+                                    <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
                                 </div>
-                            </div>
-                        </Link>
+                                <div className="relative h-full flex items-start">
+                                    <div className="px-5 py-4 flex flex-col gap-2">
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                                            RESISTENCIAS
+                                        </h3>
+                                        <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                            VER
+                                        </span>
+                                    </div>
+                                </div>
+                            </Link>
 
-                        {/* LÍQUIDOS */}
-                        <Link
-                            to="/categoria/liquidos"
-                            className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            aria-label="Ir a Líquidos"
-                        >
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                                style={{ backgroundImage: `url(${liquidos})` }}
-                                aria-hidden
-                            />
-                            <div className="absolute inset-0 bg-black/20" aria-hidden />
-                            <div className="relative h-full flex items-start">
-                                <div className="px-5 py-4 flex flex-col gap-2">
-                                    <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2_#0004]">
-                                        LÍQUIDOS
-                                    </h3>
-                                    <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
-                                        VER
-                                    </span>
+                            {/* LÍQUIDOS */}
+                            <Link
+                                to="/categoria/liquidos"
+                                className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 w-full sm:w-[20rem] md:w-[22rem] focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                aria-label="Ir a Líquidos"
+                            >
+                                <div className="absolute inset-0 rounded-xl overflow-hidden">
+                                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]" style={{ backgroundImage: `url(${liquidos})` }} aria-hidden />
+                                    <div className="absolute inset-0 bg-black/20 rounded-xl" aria-hidden />
                                 </div>
-                            </div>
-                        </Link>
+                                <div className="relative h-full flex items-start">
+                                    <div className="px-5 py-4 flex flex-col gap-2">
+                                        <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2_#0004]">
+                                            LÍQUIDOS
+                                        </h3>
+                                        <span className="self-start bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 my-4 rounded">
+                                            VER
+                                        </span>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
 
                     </div>
                 </div>
             </section>
+
+
 
 
 
