@@ -3,11 +3,11 @@ import { Menu, X } from "lucide-react"
 
 
 const CATEGORIES = [
-    { id: 1, name: "Vapes Desechables", slug: "vapes-desechables" },
+    { id: 1, name: "Pods Descartables", slug: "vapes-desechables" },
     { id: 2, name: "Pods Recargables", slug: "pods-recargables" },
     { id: 3, name: "Líquidos", slug: "liquidos" },
     { id: 4, name: "Resistencias", slug: "resistencias" },   // ✅ corregido
-    { id: 5, name: "Celulares", slug: "celulares" },
+    //{ id: 5, name: "Celulares", slug: "celulares" },
     { id: 6, name: "Perfumes", slug: "perfumes" },
 ];
 

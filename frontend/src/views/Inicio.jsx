@@ -265,7 +265,7 @@ function Inicio() {
                         </Link>
 
                         {/* CELULARES */}
-                        <Link
+                        {/* <Link
                             to="/categoria/celulares"
                             className="group relative block rounded-xl overflow-hidden shadow-md h-28 sm:h-32 md:h-36 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             aria-label="Ir a Celulares"
@@ -286,7 +286,7 @@ function Inicio() {
                                     </span>
                                 </div>
                             </div>
-                        </Link>
+                        </Link> */}
 
                         {/* VAPES DESECHABLES */}
                         <Link
@@ -303,7 +303,7 @@ function Inicio() {
                             <div className="relative h-full flex items-center">
                                 <div className="px-5">
                                     <h3 className="text-white text-xl font-extrabold uppercase leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-                                        VAPES<br />DESECHABLES
+                                        PODS<br />DESCARTABLES
                                     </h3>
                                     <span className="inline-block mt-2 bg-yellow-300 text-black font-extrabold text-sm px-3 py-1 rounded">
                                         VER

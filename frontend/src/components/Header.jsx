@@ -118,12 +118,12 @@ export default function Header() {
 
   // Categorías para el dropdown (coinciden con las del backend)
   const productCategories = [
-    { name: "Vapes Desechables", route: "/categoria/vapes-desechables", icon: "🎯" },
+    { name: "Pods Descartables", route: "/categoria/vapes-desechables", icon: "🎯" },
     { name: "Líquidos", route: "/categoria/liquidos", icon: "💧" },
     { name: "Perfumes", route: "/categoria/perfumes", icon: "🌸" },
     { name: "Pods Recargables", route: "/categoria/pods-recargables", icon: "🔄" },
     { name: "Resistencias", route: "/categoria/resistencias", icon: "🌀" },
-    { name: "Celulares", route: "/categoria/celulares", icon: "📱" },
+    //{ name: "Celulares", route: "/categoria/celulares", icon: "📱" },
   ];
 
   const goToContact = (e) => {
