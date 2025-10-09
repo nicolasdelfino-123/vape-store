@@ -95,7 +95,9 @@ const Checkout = () => {
         zipCode: store.billingAddress?.postalCode || store.shippingAddress?.postalCode || '',
         country: store.billingAddress?.country || store.shippingAddress?.country || 'Argentina',
         dni: store.dni || store.billingAddress?.dni || store.shippingAddress?.dni || '',
-        newsletter: false
+        newsletter: false,
+        comment: ''
+
     })
 
     const [shippingDifferent, setShippingDifferent] = useState(false)
@@ -477,6 +479,25 @@ const Checkout = () => {
                                 />
                             </div>
                         </div>
+                        {/* 🔽 Campo de comentarios — visible siempre */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Comentarios o indicaciones (opcional)
+                            </label>
+                            <textarea
+                                name="comment"
+                                value={billing.comment}
+                                onChange={handleBillingChange}
+                                placeholder="Ejemplo: llamar antes de entregar, envolver para regalo..."
+                                rows={3}
+                                maxLength={5000}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 resize-y"
+                            />
+                            <p className="text-xs text-gray-500 mt-1 text-right">
+                                {billing.comment.length}/5000
+                            </p>
+                        </div>
+
 
                         <div className="mt-4">
                             <label className="inline-flex items-center">
@@ -646,7 +667,9 @@ const Checkout = () => {
                                         required
                                     />
                                 </div>
+
                             </div>
+
                         </div>
 
                     )}
