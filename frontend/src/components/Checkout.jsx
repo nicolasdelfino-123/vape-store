@@ -251,6 +251,7 @@ const Checkout = () => {
             // Mail del checkout (PRIORIDAD de asociación)
             const formEmail = (billing.email || '').trim().toLowerCase()
 
+
             // Payload para el backend
             const preferenceData = {
                 items,
@@ -258,16 +259,25 @@ const Checkout = () => {
                     email: formEmail,
                     name: billing.firstName,
                     surname: billing.lastName,
-                    identification: billing.dni ? { type: 'DNI', number: String(billing.dni) } : undefined,
-                    phone: billing.phone ? { area_code: '', number: String(billing.phone) } : undefined,
-                    address: billing.address ? {
-                        street_name: billing.address,
-                        zip_code: billing.zipCode
-                    } : undefined
+                    identification: billing.dni
+                        ? { type: 'DNI', number: String(billing.dni) }
+                        : undefined,
+                    phone: billing.phone
+                        ? { area_code: '', number: String(billing.phone) }
+                        : undefined,
+                    address: billing.address
+                        ? { street_name: billing.address, zip_code: billing.zipCode }
+                        : undefined
                 },
-                // 👇 clave para que el backend asocie por mail del checkout
-                form_email: formEmail
-            }
+                form_email: formEmail,
+
+                // 👇 NUEVO: datos completos que guardará el backend en la orden
+                billing_address: billing,
+                shipping_address: shippingDifferent ? shipping : billing,
+                comment: billing.comment || "",
+                pickup: pickup,
+            };
+
 
             const token = localStorage.getItem('token')
             const headers = token

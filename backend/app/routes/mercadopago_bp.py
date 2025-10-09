@@ -249,23 +249,34 @@ def create_preference():
         form_email = (data.get('form_email') or payer_out.get("email") or "").strip().lower()
         ext_ref = str(user_id or int(datetime.utcnow().timestamp()))
 
-        # ✅ Guardamos sabores en metadata["flavors"]
+        # ✅ NUEVO: capturar comment y direcciones completas
+        comment = (data.get("comment") or "").strip()
+        shipping_info = data.get("shipping_address") or {}
+        billing_info = data.get("billing_address") or {}
+
+        # ✅ Guardamos sabores y datos extra en metadata
         preference_data = {
             "items": items,
             "payer": payer_out,
             "binary_mode": True,
             "external_reference": ext_ref,
             "additional_info": {
-                "items": items,   # sin sabores, MP los borra igual
+                "items": items,
                 "form_email": form_email,
                 "name": payer_in.get("name", ""),
-                "surname": payer_in.get("surname", "")
+                "surname": payer_in.get("surname", ""),
+                "comment": comment,
+                "shipping_address": shipping_info,
+                "billing_address": billing_info
             },
             "metadata": {
                 "form_email": form_email,
                 "name": payer_in.get("name", ""),
                 "surname": payer_in.get("surname", ""),
-                "flavors": flavors_meta   # 👈 acá van los sabores
+                "flavors": flavors_meta,
+                "comment": comment,
+                "shipping_address": shipping_info,
+                "billing_address": billing_info
             },
             "back_urls": {
                 "success": f"{frontend_url}/thank-you?status=approved",
@@ -294,7 +305,6 @@ def create_preference():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
-
 
 
 # =========================================================
@@ -437,6 +447,11 @@ def create_order_from_payment(payment_data):
         form_email = (meta.get('form_email') or addi.get('form_email') or '').strip().lower()
         ext_ref = (payment_data.get('external_reference') or '').strip()
 
+        # ✅ NUEVO: recuperar comment y direcciones completas
+        comment = meta.get("comment") or addi.get("comment") or ""
+        shipping_address = meta.get("shipping_address") or addi.get("shipping_address") or {"address": mp_address}
+        billing_address = meta.get("billing_address") or addi.get("billing_address") or shipping_address
+
         # Usuario
         user = None
         email_to_use = form_email or mp_email
@@ -466,9 +481,14 @@ def create_order_from_payment(payment_data):
             payment_method='mercadopago',
             payment_id=pid,
             external_reference=ext_ref,
+            customer_first_name=first_name,
+            customer_last_name=last_name,
             customer_email=email_to_use,
-            customer_name=full_name,
-            shipping_address=mp_address,
+            customer_phone=(payer.get('phone') or {}).get('number', ''),
+            customer_dni=(payer.get('identification') or {}).get('number', ''),
+            customer_comment=comment,
+            shipping_address=shipping_address,
+            billing_address=billing_address,
             created_at=datetime.utcnow()
         )
         session.add(order)
