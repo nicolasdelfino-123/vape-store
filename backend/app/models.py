@@ -229,32 +229,53 @@ class Order(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)  # Puede ser guest
     total_amount: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, paid, confirmed, shipped, delivered, cancelled
-    shipping_address: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
-    payment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, unique=True, index=True)  # ID del pago en MercadoPago
-    external_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Referencia externa
-    customer_email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email del cliente
-    customer_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Nombre del cliente
+    payment_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, unique=True, index=True)
+    external_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # 👇 DATOS COMPLETOS DEL CLIENTE EN EL MOMENTO DEL PEDIDO
+    customer_first_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    customer_last_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    customer_email: Mapped[str] = mapped_column(String(100), nullable=True)
+    customer_phone: Mapped[str] = mapped_column(String(40), nullable=True)
+    customer_dni: Mapped[str] = mapped_column(String(20), nullable=True)
+    customer_comment: Mapped[Optional[str]] = mapped_column(String(5000), nullable=True)
+
+    # 👇 DIRECCIÓN DE ENVÍO (y facturación si es igual)
+    shipping_address: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict  # estructura: {address, apartment, city, province, country, postalCode}
+    )
+
+    # 👇 OPCIONAL: por si en un futuro tenés facturación distinta
+    billing_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_cba_naive, onupdate=now_cba_naive)
 
     # Relaciones
     user: Mapped[Optional["User"]] = relationship("User")
     order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    
+
     def serialize(self):
         return {
             'id': self.id,
             'user_id': self.user_id,
             'total_amount': self.total_amount,
             'status': self.status,
-            'shipping_address': self.shipping_address,
             'payment_method': self.payment_method,
             'payment_id': self.payment_id,
             'external_reference': self.external_reference,
+            'customer_first_name': self.customer_first_name,
+            'customer_last_name': self.customer_last_name,
             'customer_email': self.customer_email,
-            'customer_name': self.customer_name,
+            'customer_phone': self.customer_phone,
+            'customer_dni': self.customer_dni,
+            'shipping_address': self.shipping_address,
+            'customer_comment': self.customer_comment,
+            'billing_address': self.billing_address,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
             'order_items': [item.serialize() for item in self.order_items],
