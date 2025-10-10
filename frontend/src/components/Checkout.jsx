@@ -537,7 +537,7 @@ const Checkout = () => {
                             </label>
                         </div>
 
-                        <div className="mt-4">
+                        {/*  <div className="mt-4">
                             <label className="inline-flex items-center">
                                 <input
                                     type="checkbox"
@@ -547,7 +547,7 @@ const Checkout = () => {
                                 />
                                 <span className="ml-2 text-sm text-gray-700">¿Enviar a una dirección diferente?</span>
                             </label>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Dirección de envío (si es diferente) */}

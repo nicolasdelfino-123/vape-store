@@ -14,6 +14,7 @@ from flask import url_for
 # backend/app/routes/admin_bp.py
 from flask import Blueprint, request, jsonify, current_app, url_for
 import os, io, hashlib, uuid
+from app.models import Order, OrderItem  # asegurate que esté arriba también
 
 
 
@@ -422,3 +423,98 @@ def delete_image(image_id):
                 db.session.commit()
 
     return jsonify({'message': f'Imagen {image_id} eliminada'}), 200
+
+
+# =======================
+#        PEDIDOS (ADMIN)
+# =======================
+
+
+
+@admin_bp.route("/orders", methods=["GET"])
+@jwt_required()
+def admin_get_orders():
+    """Obtener todos los pedidos (para el panel de administración)."""
+    if not admin_required():
+        return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
+
+    try:
+        orders = Order.query.order_by(Order.created_at.desc()).all()
+        serialized = []
+
+        for o in orders:
+            serialized.append({
+                "id": o.id,
+                "status": o.status,
+                "total_amount": float(o.total_amount or 0),
+                "payment_method": o.payment_method,
+                "payment_id": o.payment_id,
+                "external_reference": o.external_reference,
+                "customer_first_name": o.customer_first_name,
+                "customer_last_name": o.customer_last_name,
+                "customer_email": o.customer_email,
+                "customer_phone": o.customer_phone,
+                "customer_comment": o.customer_comment,
+                "shipping_address": o.shipping_address,
+                "billing_address": o.billing_address,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+                "order_items": [item.serialize() for item in o.order_items],
+            })
+
+        return jsonify(serialized), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error al obtener pedidos: {str(e)}"}), 500
+
+
+
+@admin_bp.route("/orders/<int:order_id>/status", methods=["PUT"])
+@jwt_required()
+def admin_update_order_status(order_id):
+    if not admin_required():
+        return jsonify({"error": "Acceso denegado"}), 403
+
+    try:
+        data = request.get_json() or {}
+        new_status = (data.get("status") or "").strip().lower()
+        tracking_code = (data.get("tracking_code") or "").strip()
+
+        valid_statuses = ["pending", "pagado", "enviado", "cancelado"]
+        if new_status not in valid_statuses:
+            return jsonify({"error": f"Estado inválido"}), 400
+
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({"error": "Pedido no encontrado"}), 404
+
+        order.status = new_status
+        if tracking_code:
+            order.tracking_code = tracking_code
+        order.updated_at = now_cba_naive()
+        db.session.commit()
+
+        # ✅ Enviar mail si se marca como enviado
+        if new_status == "enviado" and order.customer_email:
+            from flask_mail import Message
+            from app import mail
+
+            msg = Message(
+                subject="Tu pedido está en camino 🚚",
+                recipients=[order.customer_email],
+                body=(
+                    f"Hola {order.customer_first_name or ''},\n\n"
+                    f"Tu pedido #{order.id} fue enviado.\n"
+                    f"El código de seguimiento es: {tracking_code or 'no informado'}.\n\n"
+                    "¡Gracias por tu compra!\nZarpados."
+                ),
+            )
+            mail.send(msg)
+
+        return jsonify({
+            "message": f"Pedido #{order.id} actualizado a '{new_status}'",
+            "order": order.serialize()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

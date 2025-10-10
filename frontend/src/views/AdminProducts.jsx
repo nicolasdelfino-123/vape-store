@@ -557,14 +557,20 @@ export default function AdminProducts() {
                 >
                     Nuevo
                 </button>
-                <button
+                {/* <button
                     onClick={() => fetchAll()}
                     className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                     title="Actualizar datos desde el servidor"
                 >
                     🔄 Refrescar
-                </button>
+                </button> */}
 
+                <button
+                    onClick={() => (window.location.href = "/admin/pedidos")}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                    Ver pedidos
+                </button>
 
 
                 {/* Importar JSON */}

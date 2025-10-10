@@ -36,6 +36,7 @@ import LoginAdmin from "./views/LoginAdmin.jsx";
 import FloatingButtons from "./components/FloatingButtons.jsx";
 import Mayorista from "./views/Mayorista.jsx";
 import ThankYou from "./views/ThankYou.jsx";
+import AdminPedidos from "./views/AdminPedidos.jsx";
 
 // 🔥 NUEVO: Spinner + imágenes de Inicio
 import Spinner from "./components/Spinner.jsx";
@@ -155,6 +156,8 @@ const Layout = () => {
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route path="/mayorista" element={<Mayorista />} />
+          <Route path="/admin/pedidos" element={<AdminPedidos />} />
+
 
           <Route path="/pago/exitoso" element={<ThankYou />} />
           <Route path="/pago/fallido" element={<ThankYou />} />

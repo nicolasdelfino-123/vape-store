@@ -241,6 +241,8 @@ class Order(db.Model):
     customer_phone: Mapped[str] = mapped_column(String(40), nullable=True)
     customer_dni: Mapped[str] = mapped_column(String(20), nullable=True)
     customer_comment: Mapped[Optional[str]] = mapped_column(String(5000), nullable=True)
+    tracking_code: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+
 
     # 👇 DIRECCIÓN DE ENVÍO (y facturación si es igual)
     shipping_address: Mapped[dict] = mapped_column(
@@ -279,6 +281,8 @@ class Order(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
             'order_items': [item.serialize() for item in self.order_items],
+            'tracking_code': self.tracking_code,
+
         }
 
 

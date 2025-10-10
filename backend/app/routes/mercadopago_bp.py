@@ -89,7 +89,7 @@ def build_order_email_html(order_id, customer_name, customer_email, items, total
         </div>
 
         <div style="background:#f3f4f6;color:#6b7280;padding:12px 20px;font-size:12px">
-          Zarpados Vapers — Este mensaje se envió automáticamente luego de tu compra.
+          Zarpados — Este mensaje se envió automáticamente luego de tu compra.
         </div>
       </div>
     </div>
