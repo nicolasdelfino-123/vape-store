@@ -176,7 +176,9 @@ const Checkout = () => {
     // Totales
     const subtotal = store.cart?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
     // Recuperar si viene marcado pickup desde el Cart
-    const pickup = store.pickup || JSON.parse(localStorage.getItem("pickup") || "false");
+    const pickup =
+        (store.pickup ?? JSON.parse(localStorage.getItem("pickup") ?? "false")) &&
+        (billing.city || "").trim().toLowerCase().includes("las varillas");
 
     // Normalizamos la ciudad para evitar mayúsculas/minúsculas
     const billingCity = (billing.city || "").trim().toLowerCase();
@@ -271,12 +273,20 @@ const Checkout = () => {
                 },
                 form_email: formEmail,
 
-                // 👇 NUEVO: datos completos que guardará el backend en la orden
+                // ✅ Solo enviamos lo necesario al backend
+                // 👇 Enviamos dirección y modo de entrega claramente
                 billing_address: billing,
-                shipping_address: shippingDifferent ? shipping : billing,
+                shipping_address: pickup
+                    ? { mode: "pickup", label: "Retiro en local" }
+                    : {
+                        mode: "delivery",
+                        label: "Envío a domicilio",
+                        ...billing // 👈 incluimos ciudad, provincia, etc., para calcular envío
+                    },
                 comment: billing.comment || "",
                 pickup: pickup,
-            };
+            }
+
 
 
             const token = localStorage.getItem('token')

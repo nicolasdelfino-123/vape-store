@@ -452,6 +452,23 @@ def create_order_from_payment(payment_data):
         shipping_address = meta.get("shipping_address") or addi.get("shipping_address") or {"address": mp_address}
         billing_address = meta.get("billing_address") or addi.get("billing_address") or shipping_address
 
+       
+        # ✅ Si el frontend envió el modo de entrega, usamos texto legible
+        if isinstance(shipping_address, dict):
+            if shipping_address.get("mode") == "pickup":
+                shipping_text = shipping_address.get("label", "Retiro en local")
+                order_shipping_address = "Retiro en local"
+            else:
+                city = shipping_address.get("city") or ""
+                shipping_text = shipping_address.get("label", "Envío a domicilio")
+                order_shipping_address = f"{shipping_text} ({city})" if city else shipping_text
+        else:
+            shipping_text = "Envío a domicilio"
+            order_shipping_address = "Envío a domicilio"
+
+
+
+
         # Usuario
         user = None
         email_to_use = form_email or mp_email
@@ -487,7 +504,7 @@ def create_order_from_payment(payment_data):
             customer_phone=(payer.get('phone') or {}).get('number', ''),
             customer_dni=(payer.get('identification') or {}).get('number', ''),
             customer_comment=comment,
-            shipping_address=shipping_address,
+            shipping_address=order_shipping_address,
             billing_address=billing_address,
             created_at=datetime.utcnow()
         )
@@ -566,7 +583,8 @@ def create_order_from_payment(payment_data):
                 items=items_for_email,
                 total_amount=order.total_amount,
                 created_at_iso=order.created_at.isoformat(),
-                shipping_address_text=order.shipping_address
+                shipping_address_text=shipping_text
+
             )
             send_email_smtp(
                 email_to_use,
